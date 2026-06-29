@@ -2,4 +2,7 @@
   <Folder Name="/backend/">
     <Project Path="backend/OpenStickyMemos.Api/OpenStickyMemos.Api.csproj" />
   </Folder>
+  <Folder Name="/desktop/">
+    <Project Path="desktop/OpenStickyMemos.Desktop/OpenStickyMemos.Desktop.csproj" />
+  </Folder>
 </Solution>

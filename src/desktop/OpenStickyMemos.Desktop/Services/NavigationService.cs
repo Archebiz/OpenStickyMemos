@@ -1,0 +1,38 @@
+using System;
+using System.Windows.Controls;
+
+namespace OpenStickyMemos.Desktop.Services;
+
+public interface INavigationService
+{
+    void NavigateTo<T>() where T : UserControl;
+    void NavigateTo(Type viewType);
+    void GoBack();
+    event Action<Type>? NavigationChanged;
+}
+
+public class NavigationService : INavigationService
+{
+    private readonly Stack<Type> _history = new();
+    private readonly Dictionary<Type, UserControl> _cache = new();
+
+    public event Action<Type>? NavigationChanged;
+
+    public void NavigateTo<T>() where T : UserControl => NavigateTo(typeof(T));
+
+    public void NavigateTo(Type viewType)
+    {
+        _history.Push(viewType);
+        NavigationChanged?.Invoke(viewType);
+    }
+
+    public void GoBack()
+    {
+        if (_history.Count > 1)
+        {
+            _history.Pop(); // Remove current
+            var previous = _history.Peek();
+            NavigationChanged?.Invoke(previous);
+        }
+    }
+}
