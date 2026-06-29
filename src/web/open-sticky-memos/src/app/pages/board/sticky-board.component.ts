@@ -270,8 +270,8 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  @HostListener('document:keydown.delete', ['$event'])
-  handleKeydown(event: KeyboardEvent): void {
+  @HostListener('document:keydown.delete')
+  handleKeydown(): void {
     // Delete is handled via the note card (for now)
   }
 
