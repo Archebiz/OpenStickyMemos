@@ -10,11 +10,10 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.0-preview.3.25171.1" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.0-preview.3.25172.1" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0-preview.3.25171.6" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3065.39" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup>
