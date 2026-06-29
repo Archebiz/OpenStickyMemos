@@ -22,6 +22,14 @@ export const routes: Routes = [
         (m) => m.DashboardComponent
       ),
   },
+  {
+    path: 'board/:id',
+    canActivate: [AuthGuard],
+    loadComponent: () =>
+      import('./pages/board/sticky-board.component').then(
+        (m) => m.StickyBoardComponent
+      ),
+  },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: '/dashboard' },
 ];

@@ -5,6 +5,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 
 import { routes } from './app.routes';
 import { ApiInterceptor } from './core/api.interceptor';
+import { ApiService } from './core/api.service';
 import { AuthService } from './core/auth.service';
 import { SignalRService } from './core/signalr.service';
 
@@ -16,6 +17,7 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     AuthService,
     SignalRService,
+    ApiService,
     {
       provide: HTTP_INTERCEPTORS,
       useClass: ApiInterceptor,
