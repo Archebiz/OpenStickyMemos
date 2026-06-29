@@ -8,6 +8,11 @@ obj/
 *.cache
 *.vs/
 *.DotSettings
+
+# ──────────────────────────────────────────────
+# Internal Planning (not part of the project)
+# ──────────────────────────────────────────────
+docs/PLAN.md
 .vscode/
 **/appsettings.Development.json
 

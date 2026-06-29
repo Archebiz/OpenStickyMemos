@@ -1,8 +1,10 @@
 using System.Text;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using OpenStickyMemos.Api.Data;
+using OpenStickyMemos.Api.Services;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +16,12 @@ builder.Host.UseSerilog((ctx, cfg) =>
 // ── Database ──
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// ── Services ──
+builder.Services.AddScoped<IJwtService, JwtService>();
+
+// ── FluentValidation ──
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // ── JWT Authentication ──
 var jwtSection = builder.Configuration.GetSection("Jwt");
