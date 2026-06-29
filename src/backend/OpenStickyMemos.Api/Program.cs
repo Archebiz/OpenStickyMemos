@@ -19,6 +19,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // ── Services ──
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<INoteService, NoteService>();
 
 // ── FluentValidation ──
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
