@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using OpenStickyMemos.Api.Data;
 using OpenStickyMemos.Api.DTOs;
+using OpenStickyMemos.Api.Hubs;
 using OpenStickyMemos.Api.Models;
 
 namespace OpenStickyMemos.Api.Services;
@@ -20,10 +22,12 @@ public interface IProjectService
 public class ProjectService : IProjectService
 {
     private readonly AppDbContext _db;
+    private readonly IHubContext<NotesHub> _hubContext;
 
-    public ProjectService(AppDbContext db)
+    public ProjectService(AppDbContext db, IHubContext<NotesHub> hubContext)
     {
         _db = db;
+        _hubContext = hubContext;
     }
 
     public async Task<List<ProjectResponse>> GetUserProjectsAsync(Guid userId)
@@ -78,7 +82,12 @@ public class ProjectService : IProjectService
         await _db.SaveChangesAsync();
 
         // Reload with includes
-        return (await GetByIdAsync(project.Id, ownerId))!;
+        var response = (await GetByIdAsync(project.Id, ownerId))!;
+
+        // SignalR: el owner se une automáticamente al grupo
+        // (el cliente debe llamar a JoinProject desde el frontend)
+
+        return response;
     }
 
     public async Task<ProjectResponse?> UpdateAsync(Guid projectId, UpdateProjectRequest request, Guid userId)
@@ -137,7 +146,7 @@ public class ProjectService : IProjectService
         _db.ProjectMembers.Add(member);
         await _db.SaveChangesAsync();
 
-        return new MemberInfo
+        var memberInfo = new MemberInfo
         {
             Id = member.Id,
             UserId = user.Id,
@@ -147,6 +156,12 @@ public class ProjectService : IProjectService
             Role = "Member",
             JoinedAt = member.JoinedAt
         };
+
+        // SignalR: notificar a todos los miembros del proyecto
+        await _hubContext.Clients.Group(projectId.ToString())
+            .SendAsync("MemberAdded", memberInfo);
+
+        return memberInfo;
     }
 
     public async Task<bool> RemoveMemberAsync(Guid projectId, Guid memberUserId, Guid requesterId)

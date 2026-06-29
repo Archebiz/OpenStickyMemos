@@ -1,35 +1,34 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace OpenStickyMemos.Api.Hubs;
 
+[Authorize]
 public class NotesHub : Hub
 {
-    public async Task JoinProjectGroup(string projectId)
+    /// <summary>
+    /// El cliente se une al grupo del proyecto para recibir eventos en tiempo real.
+    /// </summary>
+    public async Task JoinProject(string projectId)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, projectId);
     }
 
-    public async Task LeaveProjectGroup(string projectId)
+    /// <summary>
+    /// El cliente abandona el grupo del proyecto.
+    /// </summary>
+    public async Task LeaveProject(string projectId)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, projectId);
     }
 
-    public async Task NoteCreated(object note)
+    public override async Task OnConnectedAsync()
     {
-        var projectId = Context.GetHttpContext()?.Request.Query["projectId"].ToString();
-        if (!string.IsNullOrEmpty(projectId))
-            await Clients.Group(projectId).SendAsync("NoteCreated", note);
+        await base.OnConnectedAsync();
     }
 
-    public async Task NoteUpdated(object note)
+    public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        var projectId = Context.GetHttpContext()?.Request.Query["projectId"].ToString();
-        if (!string.IsNullOrEmpty(projectId))
-            await Clients.Group(projectId).SendAsync("NoteUpdated", note);
-    }
-
-    public async Task NoteDeleted(string noteId, string projectId)
-    {
-        await Clients.Group(projectId).SendAsync("NoteDeleted", noteId);
+        await base.OnDisconnectedAsync(exception);
     }
 }

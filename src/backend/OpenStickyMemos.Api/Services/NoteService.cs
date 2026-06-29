@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using OpenStickyMemos.Api.Data;
 using OpenStickyMemos.Api.DTOs;
+using OpenStickyMemos.Api.Hubs;
 using OpenStickyMemos.Api.Models;
 
 namespace OpenStickyMemos.Api.Services;
@@ -19,11 +21,13 @@ public class NoteService : INoteService
 {
     private readonly AppDbContext _db;
     private readonly IProjectService _projectService;
+    private readonly IHubContext<NotesHub> _hubContext;
 
-    public NoteService(AppDbContext db, IProjectService projectService)
+    public NoteService(AppDbContext db, IProjectService projectService, IHubContext<NotesHub> hubContext)
     {
         _db = db;
         _projectService = projectService;
+        _hubContext = hubContext;
     }
 
     public async Task<List<NoteResponse>> GetProjectNotesAsync(Guid projectId, Guid userId)
@@ -86,7 +90,13 @@ public class NoteService : INoteService
         // Reload with author
         await _db.Entry(note).Reference(n => n.Author).LoadAsync();
 
-        return MapToResponse(note);
+        var response = MapToResponse(note);
+
+        // SignalR: notificar a todos los miembros del proyecto
+        await _hubContext.Clients.Group(projectId.ToString())
+            .SendAsync("NoteCreated", response);
+
+        return response;
     }
 
     public async Task<NoteResponse?> UpdateAsync(Guid noteId, UpdateNoteRequest request, Guid userId)
@@ -113,7 +123,14 @@ public class NoteService : INoteService
         note.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
-        return MapToResponse(note);
+
+        var response = MapToResponse(note);
+
+        // SignalR: notificar actualización a todos los miembros del proyecto
+        await _hubContext.Clients.Group(note.ProjectId.ToString())
+            .SendAsync("NoteUpdated", response);
+
+        return response;
     }
 
     public async Task<bool> DeleteAsync(Guid noteId, Guid userId)
@@ -125,8 +142,15 @@ public class NoteService : INoteService
         if (!await _projectService.IsMemberAsync(note.ProjectId, userId))
             return false;
 
+        var projectId = note.ProjectId;
+
         _db.Notes.Remove(note);
         await _db.SaveChangesAsync();
+
+        // SignalR: notificar eliminación a todos los miembros del proyecto
+        await _hubContext.Clients.Group(projectId.ToString())
+            .SendAsync("NoteDeleted", new { noteId, projectId });
+
         return true;
     }
 
