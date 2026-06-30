@@ -4,11 +4,11 @@ La aplicación de escritorio **OpenStickyMemos Desktop** se distribuye a través
 
 ---
 
-## Formatos disponibles
+## Formato actual
 
 ### 📦 Portable (.zip)
 
-**Ideal para:** Usuarios que prefieren no instalar, USB portátil, evaluación rápida.
+Actualmente solo está disponible el formato portable (sin instalador).
 
 ```
 OpenStickyMemos.Desktop-{version}-portable.zip
@@ -40,17 +40,30 @@ git clone https://github.com/Archebiz/OpenStickyMemos.git
 cd OpenStickyMemos/src/desktop/OpenStickyMemos.Desktop
 
 # Publicar como portable
-dotnet publish -c Release -r win-x64 --self-contained \
-  -p:PublishSingleFile=true \
-  -p:IncludeNativeLibrariesForSelfExtract=true \
+dotnet publish -c Release -r win-x64 --self-contained ^
+  -p:PublishSingleFile=true ^
+  -p:IncludeNativeLibrariesForSelfExtract=true ^
   -o ./publish
 ```
 
+> ⚠️ **PowerShell**: Si usas PowerShell, usa `` ` `` (backtick) para continuar líneas en vez de `^`.  
+> O ejecuta todo en una sola línea:
+> ```powershell
+> dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish
+> ```
+
 ---
 
-## Verificar la firma digital
+## Verificar la firma digital (pendiente)
 
-Cada release incluye un ejecutable firmado digitalmente. Para verificar:
+> ⏳ **Próximamente**: Se planea integrar [SignPath](https://about.signpath.io/) para firmar digitalmente el ejecutable.  
+> Mientras tanto, tu antivirus podría bloquear la app por no estar firmada.  
+> Agrega la carpeta de la app a las exclusiones de tu antivirus o usa **Windows Defender**:
+> 1. Ve a **Seguridad de Windows** → **Protección contra virus y amenazas**
+> 2. **Administrar configuración** → **Exclusiones**
+> 3. Agrega la carpeta donde extrajiste `OpenStickyMemos.Desktop.exe`
+
+Cuando esté disponible, la verificación se hará así:
 
 ```powershell
 # Verificar firma
@@ -77,7 +90,7 @@ Edita el archivo `appsettings.json` (junto al .exe):
 ```json
 {
   "ApiUrl": "https://tu-instancia.railway.app",
-  "SignalRUrl": "https://tu-instancia.railway.app/hubs/notes"
+  "SignalRUrl": "https://tu-instancia.railway.app/api/hubs/notes"
 }
 ```
 
@@ -88,7 +101,7 @@ Alternativamente, puedes configurar:
 | Variable | Descripción |
 |----------|-------------|
 | `API_URL` | URL base de la API |
-| `SIGNALR_URL` | URL del hub de SignalR |
+| `SIGNALR_URL` | URL del hub de SignalR | `https://tu-instancia.railway.app/api/hubs/notes` |
 
 ---
 

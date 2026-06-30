@@ -7,7 +7,7 @@ namespace OpenStickyMemos.Desktop.Services;
 public class AppSettings
 {
     public string ApiUrl { get; set; } = "http://localhost:5000";
-    public string SignalRUrl { get; set; } = "http://localhost:5000/hubs/notes";
+    public string SignalRUrl { get; set; } = "http://localhost:5000/api/hubs/notes";
     public OAuthSettings OAuth { get; set; } = new();
 }
 

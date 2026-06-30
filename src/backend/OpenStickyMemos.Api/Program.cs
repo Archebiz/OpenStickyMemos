@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using OpenStickyMemos.Api.Data;
 using OpenStickyMemos.Api.Services;
+using Scalar.AspNetCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -122,6 +123,9 @@ app.UseSerilogRequestLogging();
 
 // OpenAPI disponible en todos los entornos
 app.MapOpenApi();
+
+// Scalar UI (Swagger moderno) — https://localhost:5000/scalar/v1
+app.MapScalarApiReference();
 
 app.UseCors("AllowAll");
 app.UseAuthentication();
