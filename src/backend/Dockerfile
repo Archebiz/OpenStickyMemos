@@ -2,9 +2,11 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0.0-bookworm-slim-amd64 AS build
 WORKDIR /src
 
-COPY OpenStickyMemos.Api/*.csproj ./OpenStickyMemos.Api/
+# Copy csproj and restore (caching layer)
+COPY src/backend/OpenStickyMemos.Api/*.csproj ./OpenStickyMemos.Api/
 RUN dotnet restore OpenStickyMemos.Api/OpenStickyMemos.Api.csproj
 
+# Copy everything and publish
 COPY . .
 RUN dotnet publish OpenStickyMemos.Api/OpenStickyMemos.Api.csproj -c Release -o /app --no-restore
 
