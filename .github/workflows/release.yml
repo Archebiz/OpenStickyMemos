@@ -36,10 +36,10 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore backend/OpenStickyMemos.Api/OpenStickyMemos.Api.csproj
 
       - name: Build
-        run: dotnet build --no-restore -c Release
+        run: dotnet build backend/OpenStickyMemos.Api/OpenStickyMemos.Api.csproj --no-restore -c Release
 
   frontend:
     name: Frontend - Build
