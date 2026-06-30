@@ -16,12 +16,17 @@ export class AppConfigService {
   async load(): Promise<void> {
     try {
       this.config = await lastValueFrom(
-        this.http.get<AppConfig>('/assets/config.json')
+        this.http.get<AppConfig>('/assets/config.json', { responseType: 'json' })
       );
       console.log('[AppConfig] Config loaded:', this.config);
-    } catch (err) {
-      console.warn('[AppConfig] Could not load config.json, using defaults:', err);
-      console.log('[AppConfig] Default config:', this.config);
+    } catch (err: any) {
+      console.warn('[AppConfig] No se pudo cargar config.json. Esto ocurre si:');
+      console.warn('[AppConfig]   1) API_URL no está como build variable en Railway (se usó localhost por defecto)');
+      console.warn('[AppConfig]   2) angular.json no incluye src/assets en la sección "assets" (faltó copiar config.json al output)');
+      if (err?.status === 200 && typeof err?.error === 'string' && err.error.startsWith('<!')) {
+        console.warn('[AppConfig]   → Recibió HTML en vez de JSON: config.json no existe en el servidor (SPA fallback)');
+      }
+      console.warn('[AppConfig] Usando defaults:', this.config);
     }
   }
 
