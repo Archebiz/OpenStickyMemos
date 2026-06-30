@@ -1,0 +1,16 @@
+# Nixpacks configuration for OpenStickyMemos Backend
+# Railway reads this file during build
+
+pkgDir = "src/backend/OpenStickyMemos.Api"
+
+[phases.setup]
+nixPkgs = ["dotnet-sdk_10"]
+
+[phases.install]
+cmd = "dotnet restore"
+
+[phases.build]
+cmd = "dotnet publish -c Release -o /app --no-restore"
+
+[phases.start]
+cmd = "dotnet ./out/OpenStickyMemos.Api.dll"
