@@ -45,7 +45,7 @@ Tendrás tu propio servidor con backend, base de datos y frontend web funcionand
 1. Dentro del proyecto en Railway, haz clic en **New**
 2. Selecciona **Database** → **PostgreSQL**
 3. Railway lo provisionará automáticamente
-4. La variable `DATABASE_URL` se inyectará automáticamente
+4. La variable `DATABASE_URL` se inyectará automáticamente y la app la usará sin configuración adicional
 
 ### 4. Configurar variables de entorno
 
