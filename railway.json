@@ -1,7 +1,8 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "NIXPACKS",
+    "buildCommand": "cd src/backend/OpenStickyMemos.Api && curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh && chmod +x /tmp/dotnet-install.sh && /tmp/dotnet-install.sh --channel 10.0 --install-dir /usr/share/dotnet && ln -sf /usr/share/dotnet/dotnet /usr/local/bin/dotnet && dotnet restore && dotnet publish -c Release -o /app --self-contained false"
   },
   "deploy": {
     "numReplicas": 1,
