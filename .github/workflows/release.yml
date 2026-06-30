@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: extract
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+  backend:
+    name: Backend - Build
+    needs: validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+  frontend:
+    name: Frontend - Build
+    needs: validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/web/open-sticky-memos
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: src/web/open-sticky-memos/package-lock.json
+
+      - name: Install
+        run: npm ci --legacy-peer-deps
+
+      - name: Build
+        run: npx ng build --configuration production
+
+  desktop:
+    name: Desktop WPF - Build & Release
+    needs: validate
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore src/desktop/OpenStickyMemos.Desktop/OpenStickyMemos.Desktop.csproj
+
+      - name: Build
+        run: dotnet build src/desktop/OpenStickyMemos.Desktop/OpenStickyMemos.Desktop.csproj -c Release --no-restore
+
+      - name: Publish Portable
+        shell: pwsh
+        run: |
+          dotnet publish src/desktop/OpenStickyMemos.Desktop/OpenStickyMemos.Desktop.csproj `
+            -c Release -r win-x64 --self-contained `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o publish/portable
+
+      - name: Create portable zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path publish/portable/* `
+            -DestinationPath "OpenStickyMemos.Desktop-${{ needs.validate.outputs.version }}-portable.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "OpenStickyMemos ${{ github.ref_name }}"
+          body: |
+            ## OpenStickyMemos ${{ github.ref_name }}
+
+            ### Descargas
+            - 🪟 **Portable**: `OpenStickyMemos.Desktop-${{ needs.validate.outputs.version }}-portable.zip`
+
+            ### Instrucciones
+            1. Descarga el archivo `.zip` portable
+            2. Extrae en cualquier carpeta
+            3. Ejecuta `OpenStickyMemos.Desktop.exe`
+
+            ### Configuración del servidor
+            Para usar tu propio servidor, configura `appsettings.json` con la URL de tu instancia en Railway.
+
+            ### Cambios
+            _Revisa los commits para ver los cambios completos._
+          files: |
+            OpenStickyMemos.Desktop-${{ needs.validate.outputs.version }}-portable.zip
+          draft: true
+          prerelease: false

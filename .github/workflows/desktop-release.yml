@@ -1,0 +1,64 @@
+name: Desktop Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (e.g., 1.0.0)"
+        required: true
+        type: string
+
+jobs:
+  build-desktop:
+    name: Build WPF Desktop
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore src/desktop/OpenStickyMemos.Desktop/OpenStickyMemos.Desktop.csproj
+
+      - name: Publish Portable (self-contained)
+        run: |
+          dotnet publish src/desktop/OpenStickyMemos.Desktop/OpenStickyMemos.Desktop.csproj `
+            -c Release -r win-x64 --self-contained `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o publish/portable
+
+      - name: Prepare portable zip
+        run: |
+          Compress-Archive -Path publish/portable/* `
+            -DestinationPath "OpenStickyMemos.Desktop-${{ inputs.version }}-portable.zip"
+
+      - name: Upload portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-portable
+          path: OpenStickyMemos.Desktop-${{ inputs.version }}-portable.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: "OpenStickyMemos v${{ inputs.version }}"
+          body: |
+            ## OpenStickyMemos v${{ inputs.version }}
+
+            ### Descarga
+            - 🪟 **Portable**: `OpenStickyMemos.Desktop-${{ inputs.version }}-portable.zip`
+              - Descargar, extraer y ejecutar. Sin instalación requerida.
+
+            ### Notas de la versión
+            _Agrega las notas de esta versión aquí._
+
+          files: |
+            OpenStickyMemos.Desktop-${{ inputs.version }}-portable.zip
+          draft: true
+          prerelease: false
