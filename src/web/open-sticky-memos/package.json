@@ -4,7 +4,8 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "node -e \"const fs=require('fs');const u=process.env.API_URL||'http://localhost:5000';fs.writeFileSync('src/assets/config.json',JSON.stringify({apiUrl:u,signalrUrl:u+'/hubs/notes'}))\" && ng build",
+    "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

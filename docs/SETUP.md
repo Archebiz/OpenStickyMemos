@@ -77,7 +77,8 @@ En Railway, ve a tu proyecto → **Variables**. Configura las siguientes en cada
 > ⚠️ Railway usa `__` (doble underscore) para representar secciones anidadas.  
 > Ejemplo: `JWT__Key` representa `Jwt:Key` en `appsettings.json`.
 
-> ⚡ El frontend genera su `config.json` automáticamente al iniciar usando la variable `API_URL`. No necesita rebuild.
+> ⚡ El frontend genera su `assets/config.json` durante el build usando la variable `API_URL`.  
+> Si no se define, usa `http://localhost:5000` por defecto.
 
 ### 5. Configurar OAuth (Google)
 

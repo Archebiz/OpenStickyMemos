@@ -111,10 +111,8 @@ var app = builder.Build();
 // ── Pipeline ──
 app.UseSerilogRequestLogging();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+// OpenAPI disponible en todos los entornos
+app.MapOpenApi();
 
 app.UseCors("AllowAll");
 app.UseAuthentication();
