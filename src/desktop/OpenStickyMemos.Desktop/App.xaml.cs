@@ -39,11 +39,13 @@ public partial class App : Application
         services.AddTransient<MainViewModel>();
         services.AddTransient<LoginViewModel>();
         services.AddTransient<DashboardViewModel>();
+        services.AddTransient<StickyBoardViewModel>();
 
         // Views
         services.AddTransient<MainWindow>();
         services.AddTransient<LoginView>();
         services.AddTransient<DashboardView>();
+        services.AddTransient<StickyBoardView>();
 
         return services.BuildServiceProvider();
     }

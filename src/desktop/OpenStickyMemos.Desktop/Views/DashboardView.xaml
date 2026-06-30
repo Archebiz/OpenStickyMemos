@@ -13,49 +13,100 @@
         </Grid.RowDefinitions>
 
         <!-- Top bar -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20 16">
-            <TextBlock Text="Mis Proyectos" FontSize="20"
+        <Grid Grid.Row="0" Margin="20 16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Mis Proyectos" FontSize="20"
                        FontWeight="SemiBold" VerticalAlignment="Center"/>
-        </StackPanel>
+            <Button Grid.Column="1" Command="{Binding OpenCreateDialogCommand}"
+                    Content="+ Nuevo proyecto"
+                    Background="#667eea" Foreground="White"
+                    BorderThickness="0" Padding="14 8"
+                    Cursor="Hand"/>
+        </Grid>
+
+        <!-- Create dialog -->
+        <Border Grid.Row="1" Background="#80000000" Panel.ZIndex="10"
+                Visibility="{Binding ShowCreateDialog, Converter={StaticResource BoolToVis}}">
+            <Border Width="380" Height="Auto" Padding="24"
+                    Background="White" CornerRadius="12"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="Crear proyecto" FontSize="18"
+                               FontWeight="SemiBold" Margin="0 0 0 16"/>
+                    <TextBox Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="14" Padding="10" Margin="0 0 0 12"
+                             BorderBrush="#DDD" BorderThickness="1"/>
+                    <TextBox Text="{Binding NewProjectDescription, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="14" Padding="10" Margin="0 0 0 16"
+                             BorderBrush="#DDD" BorderThickness="1"
+                             MinHeight="60" AcceptsReturn="True"
+                             TextWrapping="Wrap"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Command="{Binding CloseCreateDialogCommand}"
+                                Content="Cancelar" Background="#EEE"
+                                Foreground="#555" BorderThickness="0"
+                                Padding="14 8" Margin="0 0 8 0"/>
+                        <Button Grid.Column="1" Command="{Binding CreateProjectCommand}"
+                                Content="Crear" Background="#667eea"
+                                Foreground="White" BorderThickness="0"
+                                Padding="14 8"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
 
         <!-- Loading -->
         <TextBlock Grid.Row="1" Text="Cargando proyectos..."
                    Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}"
-                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                   Foreground="#888"/>
+                   HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#888"/>
 
         <!-- Error -->
         <TextBlock Grid.Row="1" Text="{Binding ErrorMessage}"
                    Visibility="{Binding ErrorMessage, Converter={StaticResource NotNullToVis}}"
-                   Foreground="#E74C3C" HorizontalAlignment="Center"
-                   VerticalAlignment="Center"/>
+                   Foreground="#E74C3C" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
         <!-- Empty state -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
+        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
                     Visibility="{Binding HasProjects, Converter={StaticResource InvertBoolToVis}}">
             <TextBlock Text="📋" FontSize="48" TextAlignment="Center"/>
             <TextBlock Text="No tienes proyectos aún" FontSize="16"
-                       Foreground="#888" TextAlignment="Center"
-                       Margin="0 8 0 0"/>
+                       Foreground="#888" TextAlignment="Center" Margin="0 8 0 0"/>
         </StackPanel>
 
         <!-- Project list -->
-        <ListView Grid.Row="1"
-                  ItemsSource="{Binding Projects}"
-                  Margin="20"
-                  Visibility="{Binding HasProjects, Converter={StaticResource BoolToVis}}">
+        <ListView Grid.Row="1" ItemsSource="{Binding Projects}" Margin="20"
+                  Visibility="{Binding HasProjects, Converter={StaticResource BoolToVis}}"
+                  Background="Transparent" BorderThickness="0">
             <ListView.ItemTemplate>
                 <DataTemplate>
-                    <Border Padding="16" Margin="0 0 0 8"
-                            Background="White" CornerRadius="8"
-                            BorderBrush="#EEE" BorderThickness="1">
+                    <Border Padding="16" Margin="0 0 0 8" Background="White"
+                            CornerRadius="8" BorderBrush="#EEE" BorderThickness="1"
+                            Cursor="Hand">
+                        <Border.InputBindings>
+                            <MouseBinding Gesture="LeftClick"
+                                Command="{Binding DataContext.OpenProjectCommand,
+                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding Id}"/>
+                        </Border.InputBindings>
                         <StackPanel>
-                            <TextBlock Text="{Binding Name}" FontSize="15"
-                                       FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding Description}"
-                                       FontSize="12" Foreground="#888"
-                                       Margin="0 4 0 0"/>
+                            <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding Description}" FontSize="12"
+                                       Foreground="#888" Margin="0 4 0 0"/>
+                            <StackPanel Orientation="Horizontal" Margin="0 8 0 0">
+                                <TextBlock FontSize="11" Foreground="#AAA" Margin="0 0 12 0">
+                                    <Run Text="{Binding MemberCount}"/><Run Text=" miembros"/>
+                                </TextBlock>
+                                <TextBlock FontSize="11" Foreground="#AAA">
+                                    <Run Text="{Binding NoteCount}"/><Run Text=" notas"/>
+                                </TextBlock>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
                 </DataTemplate>
