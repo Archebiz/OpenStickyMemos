@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, BehaviorSubject } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { AppConfigService } from './app-config.service';
 
 export interface UserInfo {
   id: string;
@@ -20,7 +20,7 @@ export interface AuthResponse {
 
 @Injectable()
 export class AuthService {
-  private readonly apiUrl = environment.apiUrl;
+  private get apiUrl() { return this.config.apiUrl; }
   private readonly tokenKey = 'osm_access_token';
   private readonly refreshKey = 'osm_refresh_token';
   private readonly userKey = 'osm_user';
@@ -28,7 +28,7 @@ export class AuthService {
   private userSubject = new BehaviorSubject<UserInfo | null>(this.getStoredUser());
   user$ = this.userSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private config: AppConfigService) {}
 
   /** Registro con email y contraseña */
   register(email: string, password: string, displayName?: string): Observable<AuthResponse> {

@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import * as signalR from '@microsoft/signalr';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { AuthService } from './auth.service';
-import { environment } from '../../environments/environment';
+import { AppConfigService } from './app-config.service';
 
 export interface NoteEvent {
   id: string;
@@ -57,6 +57,7 @@ export class SignalRService implements OnDestroy {
 
   constructor(
     private authService: AuthService,
+    private config: AppConfigService,
     private router: Router,
     private ngZone: NgZone
   ) {}
@@ -69,7 +70,7 @@ export class SignalRService implements OnDestroy {
     if (!token) return;
 
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl(environment.signalrUrl, {
+      .withUrl(this.config.signalrUrl, {
         accessTokenFactory: () => token,
         withCredentials: true,
       })

@@ -50,7 +50,9 @@ Tendrás tu propio servidor con backend, base de datos y frontend web funcionand
 
 ### 4. Configurar variables de entorno
 
-En Railway, ve a tu proyecto → **Variables**. Agrega las siguientes:
+En Railway, ve a tu proyecto → **Variables**. Configura las siguientes en cada servicio:
+
+#### Backend (servicio en `src/backend`)
 
 | Variable | Descripción | Ejemplo |
 |----------|-------------|---------|
@@ -66,8 +68,16 @@ En Railway, ve a tu proyecto → **Variables**. Agrega las siguientes:
 | `OAuth__Microsoft__TenantId` | Tenant ID de Microsoft | `common` |
 | `ALLOWED_ORIGINS` | Orígenes CORS permitidos | `https://tudominio.railway.app` |
 
-> ⚠️ **Importante**: Railway usa `__` (doble underscore) para representar secciones anidadas.  
+#### Frontend (servicio en `src/web/open-sticky-memos`)
+
+| Variable | Descripción | Ejemplo |
+|----------|-------------|---------|
+| `API_URL` | URL del backend (sin / al final) | `https://tudominio-backend.up.railway.app` |
+
+> ⚠️ Railway usa `__` (doble underscore) para representar secciones anidadas.  
 > Ejemplo: `JWT__Key` representa `Jwt:Key` en `appsettings.json`.
+
+> ⚡ El frontend genera su `config.json` automáticamente al iniciar usando la variable `API_URL`. No necesita rebuild.
 
 ### 5. Configurar OAuth (Google)
 

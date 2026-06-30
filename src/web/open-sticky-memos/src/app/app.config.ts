@@ -8,6 +8,7 @@ import { ApiInterceptor } from './core/api.interceptor';
 import { ApiService } from './core/api.service';
 import { AuthService } from './core/auth.service';
 import { SignalRService } from './core/signalr.service';
+import { APP_CONFIG_PROVIDER } from './core/app-config.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,6 +19,7 @@ export const appConfig: ApplicationConfig = {
     AuthService,
     SignalRService,
     ApiService,
+    APP_CONFIG_PROVIDER,
     {
       provide: HTTP_INTERCEPTORS,
       useClass: ApiInterceptor,

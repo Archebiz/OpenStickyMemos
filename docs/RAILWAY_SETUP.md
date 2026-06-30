@@ -37,6 +37,7 @@ Guía paso a paso con capturas para desplegar OpenStickyMemos en Railway.
 
 Navega a tu proyecto → **Variables** y agrega:
 
+**Backend:**
 ```
 JWT__Key = "tu-clave-secreta-muy-larga-cambiame!"
 JWT__Issuer = "OpenStickyMemos"
@@ -44,7 +45,13 @@ JWT__Audience = "OpenStickyMemos"
 ASPNETCORE_ENVIRONMENT = "Production"
 ```
 
+**Frontend:**
+```
+API_URL = "https://tu-backend.up.railway.app"
+```
+
 > Railway usa `__` (doble guion bajo) para secciones anidadas.
+> El frontend genera su `config.json` automáticamente desde `API_URL`.
 
 ---
 

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { AppConfigService } from './app-config.service';
 import {
   ProjectResponse,
   CreateProjectRequest,
@@ -16,9 +16,9 @@ import {
 
 @Injectable()
 export class ApiService {
-  private readonly apiUrl = environment.apiUrl;
+  private get apiUrl() { return this.config.apiUrl; }
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private config: AppConfigService) {}
 
   // ── Proyectos ──
 
