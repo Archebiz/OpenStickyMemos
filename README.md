@@ -2,10 +2,12 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/Archebiz/OpenStickyMemos/actions/workflows/ci.yml/badge.svg)](https://github.com/Archebiz/OpenStickyMemos/actions/workflows/ci.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/Archebiz/OpenStickyMemos?logo=github)](https://github.com/Archebiz/OpenStickyMemos/releases)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Angular](https://img.shields.io/badge/Angular-19-DD0031?logo=angular)](https://angular.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://www.postgresql.org/)
-[![Railway](https://img.shields.io/badge/Railway-ready-0B0D0E?logo=railway)](https://railway.app)
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/7P8w7R?referralCode=openstickymemos)
 
 > **Notas adhesivas colaborativas en tiempo real.** Comparte notas sobre proyectos con tu equipo, actualizadas al instante desde la web o la app de escritorio.
 
@@ -122,6 +124,7 @@ docker-compose up -d postgres
 | Documento | Descripción |
 |-----------|-------------|
 | [`docs/SETUP.md`](docs/SETUP.md) | Self-hosting en Railway paso a paso |
+| [`docs/RAILWAY_SETUP.md`](docs/RAILWAY_SETUP.md) | Guía visual del proceso Railway |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Decisiones técnicas y diagramas |
 | [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md) | Cómo descargar y verificar el desktop app |
 | [`docs/SIGNING.md`](docs/SIGNING.md) | Firma de código y seguridad |
