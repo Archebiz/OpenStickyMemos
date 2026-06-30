@@ -31,14 +31,15 @@ Tendrás tu propio servidor con backend, base de datos y frontend web funcionand
 1. Inicia sesión en [Railway](https://railway.app)
 2. Haz clic en **New Project** → **Deploy from GitHub repo**
 3. Elige tu fork de `OpenStickyMemos`
-4. Railway detectará el `railway.json` y `nixpacks.toml`, buildcará el backend con .NET 10 automáticamente
+4. En **Settings** → **Root Directory**, ingresa: `src/backend`
+5. Railway usará el `railway.json` de esa carpeta con Docker para buildcar .NET 10
 
 ### 2b. Crear servicio Frontend
 
 1. Dentro del mismo proyecto, haz clic en **New** → **Service** → **Deploy from GitHub repo**
 2. Selecciona el mismo fork
 3. En **Settings** → **Root Directory**, ingresa: `src/web/open-sticky-memos`
-4. Railway detectará Node.js y buildcará Angular automáticamente
+4. Railway detectará Angular con Nixpacks automáticamente
 
 ### 3. Agregar PostgreSQL
 
