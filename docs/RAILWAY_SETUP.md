@@ -16,9 +16,10 @@ Guía paso a paso con capturas para desplegar OpenStickyMemos en Railway.
 ## 2. Crear proyecto en Railway
 
 1. Ve a [Railway.app](https://railway.app) y haz login
-2. Click **New Project**
-3. Selecciona **Deploy from GitHub repo**
-4. Selecciona tu fork
+2. Click **New Project** → **Deploy from GitHub repo**
+3. Selecciona tu fork (Railway usará `railway.json` para buildcar el backend)
+4. Luego crea un segundo servicio: **New** → **Service** → **Deploy from GitHub repo**
+5. Selecciona el mismo fork y en **Settings → Root Directory** pon `src/web/open-sticky-memos`
 
 ---
 
