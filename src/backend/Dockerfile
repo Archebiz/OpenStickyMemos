@@ -2,13 +2,13 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
 WORKDIR /src
 
-# Copy csproj and restore (caching layer)
-COPY src/backend/OpenStickyMemos.Api/*.csproj ./OpenStickyMemos.Api/
-RUN dotnet restore OpenStickyMemos.Api/OpenStickyMemos.Api.csproj
+# Copy csproj first for layer caching
+COPY src/backend/OpenStickyMemos.Api/OpenStickyMemos.Api.csproj src/backend/OpenStickyMemos.Api/
+RUN dotnet restore src/backend/OpenStickyMemos.Api/OpenStickyMemos.Api.csproj
 
-# Copy everything and publish
-COPY . .
-RUN dotnet publish OpenStickyMemos.Api/OpenStickyMemos.Api.csproj -c Release -o /app --no-restore
+# Copy remaining source files and publish
+COPY src/backend/OpenStickyMemos.Api/ src/backend/OpenStickyMemos.Api/
+RUN dotnet publish src/backend/OpenStickyMemos.Api/OpenStickyMemos.Api.csproj -c Release -o /app --no-restore
 
 # Stage 2: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS runtime
