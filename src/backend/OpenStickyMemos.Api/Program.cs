@@ -14,23 +14,8 @@ builder.Host.UseSerilog((ctx, cfg) =>
     cfg.ReadFrom.Configuration(ctx.Configuration));
 
 // ── Database ──
-var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
-    ?? builder.Configuration.GetConnectionString("DefaultConnection");
-
-if (connectionString is not null)
-{
-    // Railway provides DATABASE_URL as postgresql://...
-    if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
-    {
-        var uri = new Uri(connectionString);
-        var db = uri.AbsolutePath.TrimStart('/');
-        var userInfo = uri.UserInfo.Split(':');
-        connectionString = $"Host={uri.Host};Port={uri.Port};Database={db};Username={userInfo[0]};Password={userInfo[1]}";
-    }
-
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseNpgsql(connectionString));
-}
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ── Services ──
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -115,7 +100,8 @@ logger.LogInformation("ASPNETCORE_URLS: {Urls}", Environment.GetEnvironmentVaria
 logger.LogInformation("ASPNETCORE_ENVIRONMENT: {Env}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "(not set)");
 logger.LogInformation("DATABASE_URL present: {Db}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")));
 logger.LogInformation("SignalR Hub mapped at: /api/hubs/notes");
-logger.LogInformation("OpenAPI available at: /openapi/v1.json");
+logger.LogInformation("OpenAPI JSON at: /openapi/v1.json");
+logger.LogInformation("Swagger UI at: /swagger");
 
 // ── Pipeline ──
 app.UseSerilogRequestLogging();
