@@ -18,8 +18,10 @@ export class AppConfigService {
       this.config = await lastValueFrom(
         this.http.get<AppConfig>('/assets/config.json')
       );
-    } catch {
-      console.warn('Could not load config.json, using defaults');
+      console.log('[AppConfig] Config loaded:', this.config);
+    } catch (err) {
+      console.warn('[AppConfig] Could not load config.json, using defaults:', err);
+      console.log('[AppConfig] Default config:', this.config);
     }
   }
 

@@ -39,8 +39,11 @@ export class AuthService {
 
   /** Login con email y contraseña */
   login(email: string, password: string): Observable<AuthResponse> {
+    const url = `${this.apiUrl}/auth/login`;
+    console.log('[AuthService] Login POST to:', url);
+    console.log('[AuthService] apiUrl from config:', this.apiUrl);
     return this.http
-      .post<AuthResponse>(`${this.apiUrl}/auth/login`, { email, password })
+      .post<AuthResponse>(url, { email, password })
       .pipe(tap((res) => this.storeSession(res)));
   }
 

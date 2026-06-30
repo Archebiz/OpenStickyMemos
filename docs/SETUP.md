@@ -77,8 +77,9 @@ En Railway, ve a tu proyecto → **Variables**. Configura las siguientes en cada
 > ⚠️ Railway usa `__` (doble underscore) para representar secciones anidadas.  
 > Ejemplo: `JWT__Key` representa `Jwt:Key` en `appsettings.json`.
 
-> ⚡ El frontend genera su `assets/config.json` durante el build usando la variable `API_URL`.  
-> Si no se define, usa `http://localhost:5000` por defecto.
+> ⚡ `API_URL` es una **build-time variable**: se usa durante `npm run build` para generar `config.json`.  
+> En Railway, asegúrate de marcar `API_URL` también como **Build Variable** (no solo runtime).  
+> Si no está disponible durante el build, el frontend usará `http://localhost:5000` por defecto.
 
 ### 5. Configurar OAuth (Google)
 
@@ -156,3 +157,4 @@ git push origin main
 | **OAuth no funciona** | Verifica Client ID / Secret y Redirect URIs |
 | **CORS errors** | Agrega `ALLOWED_ORIGINS` con tu dominio |
 | **JWT inválido** | Regenera `JWT__Key` (mínimo 32 caracteres) |
+| **Frontend llama a localhost:5000** | `API_URL` se necesita en **build-time** en Railway. Ve a tu servicio frontend → **Variables** → agrega `API_URL` como **Build Variable** (no solo runtime). O usa `railway.json` con `build.environment`. Abre la consola del navegador (F12) para ver los logs `[BUILD]` y `[AppConfig]`. |

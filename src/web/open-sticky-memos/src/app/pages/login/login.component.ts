@@ -75,7 +75,17 @@ export class LoginComponent {
     this.loading = true; this.error = '';
     this.auth.login(this.email, this.password).subscribe({
       next: () => this.router.navigate(['/dashboard']),
-      error: (e) => { this.error = e.error?.error || 'Error al iniciar sesion'; this.loading = false; },
+      error: (e) => {
+        console.error('[Login] Error completo:', {
+          status: e.status,
+          statusText: e.statusText,
+          url: e.url,
+          message: e.message,
+          error: e.error,
+        });
+        this.error = e.error?.error || 'Error al iniciar sesion';
+        this.loading = false;
+      },
     });
   }
 

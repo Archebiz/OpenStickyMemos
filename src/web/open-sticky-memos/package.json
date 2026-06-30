@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "node -e \"const fs=require('fs');const u=process.env.API_URL||'http://localhost:5000';fs.writeFileSync('src/assets/config.json',JSON.stringify({apiUrl:u,signalrUrl:u+'/hubs/notes'}))\" && ng build",
+    "build": "node -e \"const fs=require('fs');const u=process.env.API_URL||'http://localhost:5000';console.log('[BUILD] API_URL =', u);console.log('[BUILD] API_URL env var present:', !!process.env.API_URL);fs.writeFileSync('src/assets/config.json',JSON.stringify({apiUrl:u,signalrUrl:u+'/hubs/notes'}));console.log('[BUILD] config.json generated:', JSON.stringify({apiUrl:u,signalrUrl:u+'/hubs/notes'}))\" && ng build",
     "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"

@@ -51,7 +51,9 @@ API_URL = "https://tu-backend.up.railway.app"
 ```
 
 > Railway usa `__` (doble guion bajo) para secciones anidadas.
-> El frontend genera su `config.json` automáticamente desde `API_URL`.
+> `API_URL` es una **build-time variable**: se usa durante `npm run build` para generar `assets/config.json`.
+> En Railway, asegúrate de marcar `API_URL` también como **Build Variable** (no solo runtime).
+> Si no está disponible durante el build, el frontend usará `http://localhost:5000` por defecto.
 
 ---
 
