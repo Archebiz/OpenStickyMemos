@@ -4,13 +4,13 @@
 pkgDir = "src/backend/OpenStickyMemos.Api"
 
 [phases.setup]
-nixPkgs = ["dotnet-sdk"]
+nixPkgs = []
 
 [phases.install]
-cmd = "dotnet restore"
+cmd = "curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh && chmod +x /tmp/dotnet-install.sh && /tmp/dotnet-install.sh --channel 10.0 --install-dir /usr/share/dotnet && ln -sf /usr/share/dotnet/dotnet /usr/local/bin/dotnet && rm /tmp/dotnet-install.sh"
 
 [phases.build]
-cmd = "dotnet publish -c Release -o /app --no-restore"
+cmd = "dotnet restore && dotnet publish -c Release -o out --self-contained false"
 
 [phases.start]
-cmd = "dotnet ./out/OpenStickyMemos.Api.dll"
+cmd = "./out/OpenStickyMemos.Api"
