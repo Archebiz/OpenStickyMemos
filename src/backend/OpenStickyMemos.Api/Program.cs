@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using OpenStickyMemos.Api.Data;
 using OpenStickyMemos.Api.Services;
-using Scalar.AspNetCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -124,8 +123,20 @@ app.UseSerilogRequestLogging();
 // OpenAPI disponible en todos los entornos
 app.MapOpenApi();
 
-// Scalar UI (Swagger moderno) — https://localhost:5000/scalar/v1
-app.MapScalarApiReference();
+// Swagger UI via CDN — https://localhost:5000/swagger
+app.MapGet("/swagger", () => Results.Content("""
+<!DOCTYPE html>
+<html>
+<head><title>OpenStickyMemos API</title>
+<link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>SwaggerUIBundle({url:'/openapi/v1.json',dom_id:'#swagger-ui'})</script>
+</body>
+</html>
+""", "text/html"));
 
 app.UseCors("AllowAll");
 app.UseAuthentication();
