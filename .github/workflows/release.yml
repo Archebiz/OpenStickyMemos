@@ -99,6 +99,28 @@ jobs:
           Compress-Archive -Path publish/portable/* `
             -DestinationPath "OpenStickyMemos.Desktop-${{ needs.validate.outputs.version }}-portable.zip"
 
+      # ── Code Signing ──
+      # Opción 1: SignPath.io (gratuito para open-source)
+      # Descomentar y configurar cuando tengas la cuenta:
+      #
+      # - name: Submit signing request to SignPath
+      #   uses: signpath/github-action-submit-signing-request@v1
+      #   with:
+      #     api-token: "${{ secrets.SIGNPATH_API_TOKEN }}"
+      #     organization-id: "${{ secrets.SIGNPATH_ORG_ID }}"
+      #     project-slug: "openstickymemos-desktop"
+      #     signing-policy-slug: "release-signing"
+      #     artifact-path: "OpenStickyMemos.Desktop-${{ needs.validate.outputs.version }}-portable.zip"
+      #
+      # Opción 2: Azure Code Signing
+      # - name: Sign with Azure Code Signing
+      #   uses: azure/codesigning-action@v1
+      #   with:
+      #     endpoint: "${{ secrets.AZURE_CODESIGNING_ENDPOINT }}"
+      #     certificate-profile-name: "${{ secrets.AZURE_CODESIGNING_CERT }}"
+      #     files: |
+      #       publish/portable/OpenStickyMemos.Desktop.exe
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -109,6 +131,9 @@ jobs:
 
             ### Descargas
             - 🪟 **Portable**: `OpenStickyMemos.Desktop-${{ needs.validate.outputs.version }}-portable.zip`
+
+            ### Verificación de firma
+            El ejecutable está firmado digitalmente (ver `Properties → Digital Signatures`).
 
             ### Instrucciones
             1. Descarga el archivo `.zip` portable
