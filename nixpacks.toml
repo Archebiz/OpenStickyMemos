@@ -4,7 +4,7 @@
 pkgDir = "src/backend/OpenStickyMemos.Api"
 
 [phases.setup]
-nixPkgs = ["dotnet-sdk_10"]
+nixPkgs = ["dotnet-sdk"]
 
 [phases.install]
 cmd = "dotnet restore"
