@@ -108,6 +108,15 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// ── Startup diagnostics ──
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("=== OpenStickyMemos Backend Starting ===");
+logger.LogInformation("ASPNETCORE_URLS: {Urls}", Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "(not set)");
+logger.LogInformation("ASPNETCORE_ENVIRONMENT: {Env}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "(not set)");
+logger.LogInformation("DATABASE_URL present: {Db}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")));
+logger.LogInformation("SignalR Hub mapped at: /api/hubs/notes");
+logger.LogInformation("OpenAPI available at: /openapi/v1.json");
+
 // ── Pipeline ──
 app.UseSerilogRequestLogging();
 
