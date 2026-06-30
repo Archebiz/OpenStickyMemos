@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService, UserInfo } from '../../core/auth.service';
 import { SignalRService } from '../../core/signalr.service';
+import { ProjectListComponent } from '../projects/project-list.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ProjectListComponent],
   template: `
     <div class="dashboard">
       <header class="header">
@@ -29,11 +30,7 @@ import { SignalRService } from '../../core/signalr.service';
       </header>
 
       <main class="content">
-        <div class="empty-state">
-          <h1>📋</h1>
-          <h3>Tus proyectos aparecerán aquí</h3>
-          <p>Próximamente: lista de proyectos y board de notas</p>
-        </div>
+        <app-project-list></app-project-list>
       </main>
     </div>
   `,
@@ -90,23 +87,6 @@ import { SignalRService } from '../../core/signalr.service';
         padding: 48px 24px;
         max-width: 1200px;
         margin: 0 auto;
-      }
-      .empty-state {
-        text-align: center;
-        padding: 80px 24px;
-        color: #888;
-      }
-      .empty-state h1 {
-        font-size: 64px;
-        margin: 0;
-      }
-      .empty-state h3 {
-        margin: 16px 0 8px;
-        color: #555;
-      }
-      .empty-state p {
-        margin: 0;
-        color: #999;
       }
     `,
   ],
