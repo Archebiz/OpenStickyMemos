@@ -72,7 +72,7 @@ En Railway, ve a tu proyecto → **Variables**. Configura las siguientes en cada
 
 | Variable | Descripción | Ejemplo |
 |----------|-------------|---------|
-| `API_URL` | URL del backend (sin / al final) | `https://tudominio-backend.up.railway.app` |
+| `API_URL` | URL del backend (sin / al final) | `https://tudominio-backend.up.railway.app/api` |
 
 > ⚠️ Railway usa `__` (doble underscore) para representar secciones anidadas.  
 > Ejemplo: `JWT__Key` representa `Jwt:Key` en `appsettings.json`.

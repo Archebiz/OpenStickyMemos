@@ -69,7 +69,7 @@ builder.Services.AddAuthentication(options =>
         {
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/api/hubs"))
             {
                 context.Token = accessToken;
             }
@@ -118,7 +118,7 @@ app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHub<OpenStickyMemos.Api.Hubs.NotesHub>("/hubs/notes").RequireCors("SignalR");
+app.MapHub<OpenStickyMemos.Api.Hubs.NotesHub>("/api/hubs/notes").RequireCors("SignalR");
 
 // ── Auto-migrate database ──
 using (var scope = app.Services.CreateScope())
