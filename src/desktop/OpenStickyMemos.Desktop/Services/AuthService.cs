@@ -22,6 +22,8 @@ public interface IAuthService
     UserInfo? CurrentUser { get; }
     bool IsLoggedIn { get; }
     event Action? AuthChanged;
+    Task<bool> LoginWithEmailAsync(string email, string password);
+    Task<bool> RegisterWithEmailAsync(string email, string password, string? displayName);
     Task<bool> LoginWithGoogleAsync(string idToken);
     Task<bool> LoginWithMicrosoftAsync(string idToken);
     Task<bool> RefreshTokenAsync();
@@ -55,6 +57,16 @@ public class AuthService : IAuthService
     public async Task<bool> LoginWithMicrosoftAsync(string idToken)
     {
         return await ExchangeToken(idToken, "Microsoft");
+    }
+
+    public async Task<bool> LoginWithEmailAsync(string email, string password)
+    {
+        return await EmailAuthAsync("/auth/login", email, password);
+    }
+
+    public async Task<bool> RegisterWithEmailAsync(string email, string password, string? displayName)
+    {
+        return await EmailAuthAsync("/auth/register", email, password, displayName);
     }
 
     public async Task<bool> RefreshTokenAsync()
@@ -98,6 +110,29 @@ public class AuthService : IAuthService
     }
 
     // ── Private ──
+
+    private async Task<bool> EmailAuthAsync(string endpoint, string email, string password, string? displayName = null)
+    {
+        try
+        {
+            var body = displayName is not null
+                ? new { email, password, displayName }
+                : (object)new { email, password };
+
+            var response = await _http.PostAsJsonAsync(endpoint, body);
+            if (!response.IsSuccessStatusCode) return false;
+
+            var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            if (auth is null) return false;
+
+            ApplyAuth(auth);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     private async Task<bool> ExchangeToken(string idToken, string provider)
     {

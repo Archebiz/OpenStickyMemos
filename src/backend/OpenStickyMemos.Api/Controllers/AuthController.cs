@@ -25,6 +25,49 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
+    /// POST /api/auth/register — Registro con email y contraseña
+    /// </summary>
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    {
+        var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        if (existingUser is not null)
+            return Conflict(new { error = "El email ya está registrado" });
+
+        var user = new User
+        {
+            Email = request.Email,
+            DisplayName = request.DisplayName ?? request.Email.Split('@')[0],
+            AuthProvider = "Email",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
+        };
+
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync();
+
+        return await GenerateAuthResponse(user);
+    }
+
+    /// <summary>
+    /// POST /api/auth/login — Inicio de sesión con email y contraseña
+    /// </summary>
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        if (user is null)
+            return Unauthorized(new { error = "Email o contraseña incorrectos" });
+
+        if (user.AuthProvider != "Email" || string.IsNullOrEmpty(user.PasswordHash))
+            return Unauthorized(new { error = "Esta cuenta usa un proveedor externo. Usa Google o Microsoft para iniciar sesión." });
+
+        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            return Unauthorized(new { error = "Email o contraseña incorrectos" });
+
+        return await GenerateAuthResponse(user);
+    }
+
+    /// <summary>
     /// POST /api/auth/google — Intercambia un id_token de Google por un JWT de la app
     /// </summary>
     [HttpPost("google")]

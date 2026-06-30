@@ -11,6 +11,18 @@ public partial class LoginViewModel : BaseViewModel
     private readonly ISettingsService _settings;
     private readonly ISignalRService _signalR;
 
+    [ObservableProperty]
+    private string _email = string.Empty;
+
+    [ObservableProperty]
+    private string _password = string.Empty;
+
+    [ObservableProperty]
+    private string _displayName = string.Empty;
+
+    [ObservableProperty]
+    private bool _isLoginMode = true;
+
     /// <summary>Evento para que la vista navegue el WebView2 a la URL de OAuth</summary>
     public event Action<string>? StartGoogleLogin;
     public event Action<string>? StartMicrosoftLogin;
@@ -19,16 +31,63 @@ public partial class LoginViewModel : BaseViewModel
     [ObservableProperty]
     private bool _showWebView;
 
-    public LoginViewModel(
-        IAuthService auth,
-        INavigationService navigation,
-        ISettingsService settings,
-        ISignalRService signalR)
+    public LoginViewModel(IAuthService auth, INavigationService navigation,
+        ISettingsService settings, ISignalRService signalR)
     {
         _auth = auth;
         _navigation = navigation;
         _settings = settings;
         _signalR = signalR;
+    }
+
+    [RelayCommand]
+    private async Task LoginWithEmailAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
+        {
+            ErrorMessage = "Completa todos los campos";
+            return;
+        }
+
+        IsLoading = true;
+        ErrorMessage = null;
+
+        try
+        {
+            bool success;
+            if (IsLoginMode)
+                success = await _auth.LoginWithEmailAsync(Email.Trim(), Password);
+            else
+                success = await _auth.RegisterWithEmailAsync(Email.Trim(), Password,
+                    string.IsNullOrWhiteSpace(DisplayName) ? null : DisplayName.Trim());
+
+            if (success)
+            {
+                await _signalR.StartAsync();
+                _navigation.NavigateTo<Views.DashboardView>();
+            }
+            else
+            {
+                ErrorMessage = IsLoginMode
+                    ? "Email o contraseña incorrectos"
+                    : "No se pudo registrar. ¿El email ya está en uso?";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleMode()
+    {
+        IsLoginMode = !IsLoginMode;
+        ErrorMessage = null;
     }
 
     [RelayCommand]

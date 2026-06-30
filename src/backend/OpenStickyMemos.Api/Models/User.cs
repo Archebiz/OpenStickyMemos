@@ -18,10 +18,13 @@ public class User
     public string? AvatarUrl { get; set; }
 
     [Required, MaxLength(32)]
-    public string AuthProvider { get; set; } = string.Empty; // "Google" or "Microsoft"
+    public string AuthProvider { get; set; } = "Email";      // "Email", "Google", or "Microsoft"
 
-    [Required, MaxLength(256)]
-    public string ProviderId { get; set; } = string.Empty;   // External provider user ID
+    [MaxLength(256)]
+    public string? ProviderId { get; set; }                  // External provider user ID
+
+    [MaxLength(512)]
+    public string? PasswordHash { get; set; }                // For email/password auth
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

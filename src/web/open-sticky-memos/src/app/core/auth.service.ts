@@ -30,6 +30,20 @@ export class AuthService {
 
   constructor(private http: HttpClient) {}
 
+  /** Registro con email y contraseña */
+  register(email: string, password: string, displayName?: string): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${this.apiUrl}/auth/register`, { email, password, displayName })
+      .pipe(tap((res) => this.storeSession(res)));
+  }
+
+  /** Login con email y contraseña */
+  login(email: string, password: string): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${this.apiUrl}/auth/login`, { email, password })
+      .pipe(tap((res) => this.storeSession(res)));
+  }
+
   /** Login con Google — envía el id_token al backend */
   loginWithGoogle(idToken: string): Observable<AuthResponse> {
     return this.exchangeToken(idToken, 'Google');

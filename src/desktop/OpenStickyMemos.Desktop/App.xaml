@@ -8,6 +8,8 @@
             <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
             <converters:InvertBoolToVisibilityConverter x:Key="InvertBoolToVis"/>
             <converters:NotNullToVisibilityConverter x:Key="NotNullToVis"/>
+            <converters:BoolToStringConverter x:Key="LoginRegisterText" TrueValue="Iniciar sesión" FalseValue="Crear cuenta"/>
+            <converters:BoolToStringConverter x:Key="ToggleLoginText" TrueValue="¿No tienes cuenta? Regístrate" FalseValue="¿Ya tienes cuenta? Inicia sesión"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
