@@ -1,3 +1,4 @@
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using OpenStickyMemos.Desktop.Views;
@@ -22,6 +23,8 @@ public partial class MainViewModel : BaseViewModel
     [ObservableProperty]
     private string? _userAvatarUrl;
 
+    private static readonly string LogPath = App.LogPath;
+
     public MainViewModel(
         IAuthService auth,
         INavigationService navigation,
@@ -33,25 +36,28 @@ public partial class MainViewModel : BaseViewModel
 
         _auth.AuthChanged += OnAuthChanged;
 
-        // Try auto-login
+        // Mostrar LoginView inmediatamente, auto-login en segundo plano
+        _navigation.NavigateTo<Views.LoginView>();
+
         _ = TryAutoLoginAsync();
     }
 
     private async Task TryAutoLoginAsync()
     {
-        IsLoading = true;
-        var success = await _auth.TryAutoLoginAsync();
-        if (success)
+        try
         {
-            ApplyUserState();
-            await _signalR.StartAsync();
-            _navigation.NavigateTo<Views.DashboardView>();
+            var success = await _auth.TryAutoLoginAsync();
+            if (success)
+            {
+                ApplyUserState();
+                await _signalR.StartAsync();
+                _navigation.NavigateTo<Views.DashboardView>();
+            }
         }
-        else
+        catch (Exception ex)
         {
-            _navigation.NavigateTo<Views.LoginView>();
+            try { File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss}] [ERROR] TryAutoLoginAsync: {ex}\n"); } catch { }
         }
-        IsLoading = false;
     }
 
     [RelayCommand]
