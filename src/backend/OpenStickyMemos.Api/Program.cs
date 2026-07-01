@@ -136,25 +136,32 @@ app.MapGet("/swagger", () => Results.Content("""
 <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
 <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
 <script>
-// Plugin que agrega esquema Bearer al spec
+// Plugin que agrega esquema Bearer al spec después de cargar
 const bearerPlugin = () => ({
   statePlugins: {
     spec: {
       wrapActions: {
         updateSpec: (oriAction) => (spec) => {
-          const parsed = typeof spec === 'string' ? JSON.parse(spec) : spec;
-          parsed.components = parsed.components || {};
-          parsed.components.securitySchemes = {
-            Bearer: {
-              type: 'http',
-              scheme: 'bearer',
-              bearerFormat: 'JWT',
-              description: 'Token JWT de POST /api/auth/login'
+          if (!spec) return oriAction(spec);
+          try {
+            let parsed = typeof spec === 'string' ? JSON.parse(spec) : spec;
+            if (parsed && parsed.openapi) {
+              parsed = JSON.parse(JSON.stringify(parsed)); // clonar
+              parsed.components = parsed.components || {};
+              parsed.components.securitySchemes = {
+                Bearer: {
+                  type: 'http',
+                  scheme: 'bearer',
+                  bearerFormat: 'JWT',
+                  description: 'Token JWT de POST /api/auth/login'
+                }
+              };
+              parsed.security = [{ Bearer: [] }];
             }
-          };
-          parsed.security = parsed.security || [];
-          parsed.security.push({ Bearer: [] });
-          return oriAction(parsed);
+            return oriAction(parsed);
+          } catch (e) {
+            return oriAction(spec);
+          }
         }
       }
     }
@@ -187,6 +194,9 @@ window.logoutSwagger = function() {
 </body>
 </html>
 """, "text/html"));
+
+// Favicon (evita 404)
+app.MapGet("/favicon.ico", () => Results.NoContent());
 
 app.UseCors("AllowAll");
 app.UseAuthentication();
