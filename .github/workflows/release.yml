@@ -9,6 +9,8 @@ jobs:
   validate:
     name: Validate
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.extract.outputs.version }}
 
@@ -132,8 +134,9 @@ jobs:
             ### Descargas
             - 🪟 **Portable**: `OpenStickyMemos.Desktop-${{ needs.validate.outputs.version }}-portable.zip`
 
-            ### Verificación de firma
-            El ejecutable está firmado digitalmente (ver `Properties → Digital Signatures`).
+            ### Firma digital (pendiente)
+            ⏳ El ejecutable no está firmado aún. Tu antivirus puede bloquearlo.
+            Agrega la carpeta de la app a las exclusiones de Windows Defender.
 
             ### Instrucciones
             1. Descarga el archivo `.zip` portable
