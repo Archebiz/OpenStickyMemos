@@ -17,6 +17,33 @@
                       ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
 
+    <Window.Resources>
+        <Style x:Key="WindowButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="Tag" Value="close">
+                    <Setter Property="FontSize" Value="16"/>
+                </Trigger>
+                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Background" Value="#FFFFFF33"/>
+                </DataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                        <Condition Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="close"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Background" Value="#E74C3C"/>
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
     <Border Background="#F0F2F5" CornerRadius="8" Margin="0">
         <Border.Effect>
             <DropShadowEffect BlurRadius="20" ShadowDepth="2" Opacity="0.3" Color="#333"/>
@@ -73,30 +100,4 @@
         </Grid>
     </Border>
 
-    <Window.Resources>
-        <Style x:Key="WindowButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Width" Value="40"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers>
-                <Trigger Property="Tag" Value="close">
-                    <Setter Property="FontSize" Value="16"/>
-                </Trigger>
-                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True">
-                    <Setter Property="Background" Value="#FFFFFF33"/>
-                </DataTrigger>
-                <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                        <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
-                        <Condition Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="close"/>
-                    </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="#E74C3C"/>
-                </MultiDataTrigger>
-            </Style.Triggers>
-        </Style>
-    </Window.Resources>
 </Window>
