@@ -6,41 +6,97 @@
         xmlns:vm="clr-namespace:OpenStickyMemos.Desktop.ViewModels"
         mc:Ignorable="d"
         Title="OpenStickyMemos" Height="700" Width="1100"
+        MinWidth="800" MinHeight="500"
         WindowStartupLocation="CenterScreen"
+        WindowStyle="None" ResizeMode="CanResize"
+        Background="Transparent"
         d:DataContext="{d:DesignInstance vm:MainViewModel}">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Background="#667eea" Padding="12 8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" GlassFrameThickness="0"
+                      ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
 
-                <TextBlock Grid.Column="0" Text="OpenStickyMemos"
-                           FontSize="16" FontWeight="SemiBold"
-                           Foreground="White" VerticalAlignment="Center"/>
+    <Border Background="#F0F2F5" CornerRadius="8" Margin="0">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="2" Opacity="0.3" Color="#333"/>
+        </Border.Effect>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal"
-                            Visibility="{Binding IsLoggedIn, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="{Binding UserDisplayName}"
-                               Foreground="White" VerticalAlignment="Center"
-                               Margin="0 0 12 0"/>
-                    <Button Content="Cerrar sesión" Command="{Binding LogoutCommand}"
-                            Background="Transparent" BorderBrush="White"
-                            Foreground="White" BorderThickness="1"
-                            Padding="8 4" FontSize="12"/>
-                </StackPanel>
-            </Grid>
-        </Border>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-        <!-- Content Area -->
-        <ContentControl Grid.Row="1" x:Name="MainContentArea"/>
-    </Grid>
+            <!-- Custom Title Bar (drag handle) -->
+            <Border Grid.Row="0" Background="#667eea" Padding="0" MouseLeftButtonDown="TitleBar_MouseDown">
+                <Grid Height="40">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- App title -->
+                    <TextBlock Grid.Column="0" Text="  📝 OpenStickyMemos"
+                               FontSize="14" FontWeight="SemiBold"
+                               Foreground="White" VerticalAlignment="Center"/>
+
+                    <!-- Right side -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <!-- Logged-in user info -->
+                        <StackPanel Orientation="Horizontal"
+                                    Visibility="{Binding IsLoggedIn, Converter={StaticResource BoolToVis}}"
+                                    Margin="0 0 8 0">
+                            <TextBlock Text="{Binding UserDisplayName}"
+                                       Foreground="White" VerticalAlignment="Center"
+                                       FontSize="12" Margin="0 0 8 0"/>
+                            <Button Content="Cerrar sesión" Command="{Binding LogoutCommand}"
+                                    Background="Transparent" BorderBrush="White"
+                                    Foreground="White" BorderThickness="1"
+                                    Padding="6 2" FontSize="11" Height="26"/>
+                        </StackPanel>
+
+                        <!-- Window buttons -->
+                        <Button Content="─" Click="Minimize_Click"
+                                Style="{StaticResource WindowButtonStyle}" Tag="min"/>
+                        <Button Content="☐" Click="Maximize_Click"
+                                Style="{StaticResource WindowButtonStyle}" Tag="max"/>
+                        <Button Content="✕" Click="Close_Click"
+                                Style="{StaticResource WindowButtonStyle}" Tag="close"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Content Area -->
+            <ContentControl Grid.Row="1" x:Name="MainContentArea"/>
+        </Grid>
+    </Border>
+
+    <Window.Resources>
+        <Style x:Key="WindowButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="Tag" Value="close">
+                    <Setter Property="FontSize" Value="16"/>
+                </Trigger>
+                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Background" Value="#FFFFFF33"/>
+                </DataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                        <Condition Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="close"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Background" Value="#E74C3C"/>
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
 </Window>
