@@ -36,9 +36,7 @@ public partial class MainViewModel : BaseViewModel
 
         _auth.AuthChanged += OnAuthChanged;
 
-        // Mostrar LoginView inmediatamente, auto-login en segundo plano
-        _navigation.NavigateTo<Views.LoginView>();
-
+        // Auto-login en segundo plano (MainWindow ya muestra LoginView)
         _ = TryAutoLoginAsync();
     }
 
