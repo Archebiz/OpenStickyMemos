@@ -134,8 +134,9 @@ app.MapGet("/swagger", () => Results.Content("""
 <body>
 <div id="swagger-ui"></div>
 <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
 <script>
-// Plugin que agrega esquema Bearer al spec para que aparezca el candado
+// Plugin que agrega esquema Bearer al spec
 const bearerPlugin = () => ({
   statePlugins: {
     spec: {
