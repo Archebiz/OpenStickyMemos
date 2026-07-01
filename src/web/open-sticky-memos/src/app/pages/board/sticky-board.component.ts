@@ -30,7 +30,9 @@ import { NoteResponse, ProjectResponse } from '../../models';
               👥 Invitar
             </button>
           }
-          <button class="btn-add" (click)="addNote()">+ Nueva nota</button>
+          <button class="btn-add" [disabled]="addingNote" (click)="addNote()">
+            {{ addingNote ? '...' : '+ Nueva nota' }}
+          </button>
         </div>
       </div>
 
@@ -48,9 +50,10 @@ import { NoteResponse, ProjectResponse } from '../../models';
             />
             <button
               class="btn-primary"
+              [disabled]="inviting"
               (click)="inviteMember(emailInput.value); emailInput.value = ''"
             >
-              Invitar
+              {{ inviting ? '...' : 'Invitar' }}
             </button>
             @if (inviteMessage) {
               <p class="invite-msg">{{ inviteMessage }}</p>
@@ -93,7 +96,7 @@ import { NoteResponse, ProjectResponse } from '../../models';
         @if (notes.length === 0) {
           <div class="empty-canvas">
             <p>No hay notas aún</p>
-            <button class="btn-add" (click)="addNote()">Crear primera nota</button>
+            <button class="btn-add" [disabled]="addingNote" (click)="addNote()">{{ addingNote ? '...' : 'Crear primera nota' }}</button>
           </div>
         }
       </div>
@@ -234,6 +237,8 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
   notes: NoteCardData[] = [];
   showShareDialog = false;
   inviteMessage = '';
+  addingNote = false;
+  inviting = false;
 
   // Drag / resize state
   private dragging: { noteId: string; startX: number; startY: number; origX: number; origY: number } | null = null;
@@ -325,6 +330,8 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
   // ── CRUD ──
 
   addNote(): void {
+    if (this.addingNote) return;
+    this.addingNote = true;
     const offset = this.notes.length * 30;
     this.api
       .createNote(this.projectId, {
@@ -337,7 +344,9 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (note) => {
           this.notes = [...this.notes, this.toCardData(note)];
+          this.addingNote = false;
         },
+        error: () => (this.addingNote = false),
       });
   }
 
@@ -439,14 +448,17 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
   // ── Share ──
 
   inviteMember(email: string): void {
-    if (!email.trim()) return;
+    if (!email.trim() || this.inviting) return;
+    this.inviting = true;
     this.api.addMember(this.projectId, { email: email.trim() }).subscribe({
       next: () => {
         this.inviteMessage = `✅ ${email.trim()} agregado al proyecto`;
         this.loadProject();
+        this.inviting = false;
       },
       error: () => {
         this.inviteMessage = '❌ No se pudo agregar. ¿El usuario existe?';
+        this.inviting = false;
       },
     });
   }

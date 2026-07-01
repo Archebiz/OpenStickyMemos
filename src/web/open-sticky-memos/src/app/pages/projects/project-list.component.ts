@@ -41,10 +41,10 @@ import { ProjectResponse } from '../../models';
               </button>
               <button
                 class="btn-primary"
-                [disabled]="!newProjectName.trim()"
+                [disabled]="!newProjectName.trim() || creating"
                 (click)="createProject()"
               >
-                Crear
+                {{ creating ? 'Creando...' : 'Crear' }}
               </button>
             </div>
           </div>
@@ -232,6 +232,7 @@ import { ProjectResponse } from '../../models';
 export class ProjectListComponent implements OnInit {
   projects: ProjectResponse[] = [];
   loading = true;
+  creating = false;
   showCreate = false;
   newProjectName = '';
   newProjectDesc = '';
@@ -257,7 +258,8 @@ export class ProjectListComponent implements OnInit {
   }
 
   createProject(): void {
-    if (!this.newProjectName.trim()) return;
+    if (!this.newProjectName.trim() || this.creating) return;
+    this.creating = true;
     this.api
       .createProject({
         name: this.newProjectName.trim(),
@@ -269,7 +271,9 @@ export class ProjectListComponent implements OnInit {
           this.showCreate = false;
           this.newProjectName = '';
           this.newProjectDesc = '';
+          this.creating = false;
         },
+        error: () => (this.creating = false),
       });
   }
 
