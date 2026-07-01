@@ -41,6 +41,12 @@ public partial class LoginViewModel : BaseViewModel
     }
 
     [RelayCommand]
+    private void CloseApp()
+    {
+        System.Windows.Application.Current.Shutdown();
+    }
+
+    [RelayCommand]
     private void OpenSettings()
     {
         var settings = _settings.Current;

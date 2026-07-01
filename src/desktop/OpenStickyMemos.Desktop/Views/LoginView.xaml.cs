@@ -16,10 +16,23 @@ public partial class LoginView : UserControl
         Loaded += OnLoaded;
     }
 
+    private void TogglePasswordVisibility(object sender, RoutedEventArgs e)
+    {
+        PasswordBox.PasswordChar = PasswordBox.PasswordChar == '\0' ? '•' : '\0';
+        (sender as System.Windows.Controls.Button).Content =
+            PasswordBox.PasswordChar == '\0' ? "🔓" : "👁️";
+    }
+
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         _vm = DataContext as LoginViewModel;
         if (_vm is null) return;
+
+        PasswordBox.PasswordChar = '•';
+        PasswordBox.PasswordChanged += (_, _) =>
+        {
+            if (_vm is not null) _vm.Password = PasswordBox.Password;
+        };
 
         // Initialize WebView2
         await AuthWebView.EnsureCoreWebView2Async();

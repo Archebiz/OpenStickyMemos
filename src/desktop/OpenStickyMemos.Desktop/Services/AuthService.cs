@@ -49,6 +49,12 @@ public class AuthService : IAuthService
         _http = new HttpClient { BaseAddress = new Uri(settings.Current.ApiUrl) };
     }
 
+    private static readonly string LogPath = Desktop.App.LogPath;
+    private static void LogHttp(string msg)
+    {
+        try { System.IO.File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss}] [HTTP] {msg}\n"); } catch { }
+    }
+
     public async Task<bool> LoginWithGoogleAsync(string idToken)
     {
         return await ExchangeToken(idToken, "Google");
@@ -76,11 +82,15 @@ public class AuthService : IAuthService
 
         try
         {
+            LogHttp($">> POST /auth/refresh");
             var response = await _http.PostAsJsonAsync("/auth/refresh",
                 new { refreshToken });
+            var respBody = await response.Content.ReadAsStringAsync();
+            LogHttp($"<< {(int)response.StatusCode} {respBody}");
+
             if (!response.IsSuccessStatusCode) return false;
 
-            var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            var auth = System.Text.Json.JsonSerializer.Deserialize<AuthResponse>(respBody);
             if (auth is null) return false;
 
             ApplyAuth(auth);
@@ -119,10 +129,16 @@ public class AuthService : IAuthService
                 ? new { email, password, displayName }
                 : (object)new { email, password };
 
+            var json = JsonSerializer.Serialize(body);
+            LogHttp($">> POST {endpoint} {json}");
+
             var response = await _http.PostAsJsonAsync(endpoint, body);
+            var respJson = await response.Content.ReadAsStringAsync();
+            LogHttp($"<< {(int)response.StatusCode} {respJson}");
+
             if (!response.IsSuccessStatusCode) return false;
 
-            var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            var auth = JsonSerializer.Deserialize<AuthResponse>(respJson);
             if (auth is null) return false;
 
             ApplyAuth(auth);
@@ -139,12 +155,15 @@ public class AuthService : IAuthService
         try
         {
             var endpoint = provider == "Google" ? "google" : "microsoft";
+            LogHttp($">> POST /auth/{endpoint}");
             var response = await _http.PostAsJsonAsync($"/auth/{endpoint}",
                 new { idToken, provider });
+            var respBody = await response.Content.ReadAsStringAsync();
+            LogHttp($"<< {(int)response.StatusCode} {respBody}");
 
             if (!response.IsSuccessStatusCode) return false;
 
-            var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            var auth = System.Text.Json.JsonSerializer.Deserialize<AuthResponse>(respBody);
             if (auth is null) return false;
 
             ApplyAuth(auth);
