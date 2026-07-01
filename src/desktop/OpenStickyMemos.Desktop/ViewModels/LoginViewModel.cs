@@ -41,6 +41,21 @@ public partial class LoginViewModel : BaseViewModel
     }
 
     [RelayCommand]
+    private void OpenSettings()
+    {
+        var settings = _settings.Current;
+        var newApi = Microsoft.VisualBasic.Interaction.InputBox(
+            "URL del servidor API:", "Configuración", settings.ApiUrl, -1, -1);
+        if (!string.IsNullOrWhiteSpace(newApi) && newApi != settings.ApiUrl)
+        {
+            settings.ApiUrl = newApi.TrimEnd('/');
+            settings.SignalRUrl = newApi.TrimEnd('/') + "/api/hubs/notes";
+            _settings.Save(settings);
+            ErrorMessage = "✅ Configuración guardada. Reinicia la app si es necesario.";
+        }
+    }
+
+    [RelayCommand]
     private async Task LoginWithEmailAsync()
     {
         if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))

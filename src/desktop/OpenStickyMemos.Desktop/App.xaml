@@ -10,6 +10,8 @@
             <converters:NotNullToVisibilityConverter x:Key="NotNullToVis"/>
             <converters:BoolToStringConverter x:Key="LoginRegisterText" TrueValue="Iniciar sesión" FalseValue="Crear cuenta"/>
             <converters:BoolToStringConverter x:Key="ToggleLoginText" TrueValue="¿No tienes cuenta? Regístrate" FalseValue="¿Ya tienes cuenta? Inicia sesión"/>
+            <DropShadowEffect x:Key="CardShadow" BlurRadius="24" ShadowDepth="4"
+                              Opacity="0.25" Color="#333"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

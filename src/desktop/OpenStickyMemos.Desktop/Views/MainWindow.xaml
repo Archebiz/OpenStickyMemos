@@ -13,7 +13,7 @@
         d:DataContext="{d:DesignInstance vm:MainViewModel}">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="0" GlassFrameThickness="0"
+        <WindowChrome CaptionHeight="30" GlassFrameThickness="0"
                       ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
 
@@ -56,7 +56,7 @@
             </Grid.RowDefinitions>
 
             <!-- Custom Title Bar (drag handle) -->
-            <Border Grid.Row="0" Background="#667eea" Padding="0" MouseLeftButtonDown="TitleBar_MouseDown">
+            <Border x:Name="TitleBar" Grid.Row="0" Background="#667eea" Padding="0" MouseLeftButtonDown="TitleBar_MouseDown">
                 <Grid Height="40">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>

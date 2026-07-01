@@ -56,6 +56,23 @@ public partial class MainWindow : Window
 
             MainContentArea.Content = view;
             log += "  -> Content asignado OK\n";
+
+            // Ajustar ventana según la vista
+            if (viewType == typeof(LoginView))
+            {
+                TitleBar.Visibility = Visibility.Collapsed;
+                MinWidth = 0; MinHeight = 0;
+                Width = 440; Height = 630;
+                ResizeMode = ResizeMode.NoResize;
+                WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            }
+            else
+            {
+                TitleBar.Visibility = Visibility.Visible;
+                MinWidth = 800; MinHeight = 500;
+                Width = 1100; Height = 700;
+                ResizeMode = ResizeMode.CanResize;
+            }
         }
         catch (Exception ex)
         {

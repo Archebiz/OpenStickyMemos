@@ -7,60 +7,110 @@
              xmlns:vm="clr-namespace:OpenStickyMemos.Desktop.ViewModels"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:LoginViewModel}">
-    <Grid Background="#F0F2F5">
+    <Grid Background="Transparent">
+        <!-- Loading overlay -->
         <Border Background="White" Panel.ZIndex="10"
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock Text="Iniciando sesion..." FontSize="16" Foreground="#888"/>
             </StackPanel>
         </Border>
+
+        <!-- WebView para OAuth -->
         <wv2:WebView2 x:Name="AuthWebView"
                       Visibility="{Binding ShowWebView, Converter={StaticResource BoolToVis}}"
                       Margin="0"/>
-        <Border Width="380" Height="Auto" Padding="32" Background="White" CornerRadius="12"
+
+        <!-- Card de login -->
+        <Border Width="380" Height="Auto" Padding="28" Background="White" CornerRadius="16"
                 HorizontalAlignment="Center" VerticalAlignment="Center"
-                Visibility="{Binding ShowWebView, Converter={StaticResource InvertBoolToVis}}">
+                Visibility="{Binding ShowWebView, Converter={StaticResource InvertBoolToVis}}"
+                Effect="{StaticResource CardShadow}">
             <StackPanel>
-                <TextBlock Text=":memo:" FontSize="48" TextAlignment="Center"/>
-                <TextBlock Text="OpenStickyMemos" FontSize="22" FontWeight="SemiBold"
-                           TextAlignment="Center" Margin="0 8 0 4"/>
-                <TextBlock Text="Notas colaborativas en tiempo real" FontSize="13"
-                           Foreground="#888" TextAlignment="Center" Margin="0 0 0 16"/>
+                <!-- Logo y título -->
+                <TextBlock Text="📝" FontSize="40" TextAlignment="Center"/>
+                <TextBlock Text="OpenStickyMemos" FontSize="20" FontWeight="SemiBold"
+                           TextAlignment="Center" Margin="0 4 0 2"/>
+                <TextBlock Text="Notas colaborativas en tiempo real" FontSize="12"
+                           Foreground="#999" TextAlignment="Center" Margin="0 0 0 16"/>
+
+                <!-- Email -->
+                <TextBlock Text="Correo electrónico" FontSize="11" FontWeight="SemiBold" Foreground="#666" Margin="0 0 0 4"/>
                 <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
-                         FontSize="14" Padding="10" Margin="0 0 0 8" BorderBrush="#DDD" BorderThickness="1"/>
+                         FontSize="13" Padding="10 9" Margin="0 0 0 12" BorderBrush="#DDD" BorderThickness="1"/>
+
+                <!-- Contraseña -->
+                <TextBlock Text="Contraseña" FontSize="11" FontWeight="SemiBold" Foreground="#666" Margin="0 0 0 4"/>
                 <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"
-                         FontSize="14" Padding="10" Margin="0 0 0 8" BorderBrush="#DDD" BorderThickness="1"/>
-                <TextBox Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}"
-                         FontSize="14" Padding="10" Margin="0 0 0 8" BorderBrush="#DDD" BorderThickness="1"
-                         Visibility="{Binding IsLoginMode, Converter={StaticResource InvertBoolToVis}}"/>
-                <Button Command="{Binding LoginWithEmailCommand}" Height="40"
-                        Background="#667eea" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="0 0 0 4">
+                         FontSize="13" Padding="10 9" Margin="0 0 0 12" BorderBrush="#DDD" BorderThickness="1"/>
+
+                <!-- DisplayName (solo registro) -->
+                <StackPanel Visibility="{Binding IsLoginMode, Converter={StaticResource InvertBoolToVis}}">
+                    <TextBlock Text="Nombre (opcional)" FontSize="11" FontWeight="SemiBold" Foreground="#666" Margin="0 0 0 4"/>
+                    <TextBox Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="13" Padding="10 9" Margin="0 0 0 12" BorderBrush="#DDD" BorderThickness="1"/>
+                </StackPanel>
+
+                <!-- Botón principal -->
+                <Button Command="{Binding LoginWithEmailCommand}" Height="38"
+                        Background="#667eea" Foreground="White" BorderThickness="0"
+                        Cursor="Hand" Margin="0 0 0 4" FontSize="14" FontWeight="SemiBold">
                     <TextBlock Text="{Binding IsLoginMode, Converter={StaticResource LoginRegisterText}}"/>
                 </Button>
-                <TextBlock Margin="0 0 12 0" TextAlignment="Center">
+
+                <!-- Link login/register -->
+                <TextBlock Margin="0 6 0 0" TextAlignment="Center" FontSize="12">
                     <Hyperlink Command="{Binding ToggleModeCommand}">
                         <TextBlock Text="{Binding IsLoginMode, Converter={StaticResource ToggleLoginText}}"/>
                     </Hyperlink>
                 </TextBlock>
-                <TextBlock Text="{Binding ErrorMessage}" Foreground="#E74C3C" FontSize="12"
-                           TextAlignment="Center" Margin="0 0 0 12"/>
-                <Border BorderBrush="#EEE" BorderThickness="0 1 0 0" Margin="0 0 0 12"/>
-                <TextBlock Text="o continua con" FontSize="12" Foreground="#AAA"
-                           TextAlignment="Center" Margin="0 0 0 8"/>
-                <Button Command="{Binding LoginWithGoogleCommand}" Height="44" Margin="0 0 0 8"
-                        Background="White" BorderBrush="#DDD" BorderThickness="1" Cursor="Hand">
+
+                <!-- Error message -->
+                <TextBlock Text="{Binding ErrorMessage}" Foreground="#E74C3C" FontSize="11"
+                           TextAlignment="Center" Margin="0 6 0 0"/>
+
+                <!-- Divisor -->
+                <Border BorderBrush="#EEE" BorderThickness="0 1 0 0" Margin="0 14"/>
+
+                <TextBlock Text="o continúa con" FontSize="11" Foreground="#AAA"
+                           TextAlignment="Center" Margin="0 0 0 10"/>
+
+                <!-- Google -->
+                <Button Command="{Binding LoginWithGoogleCommand}" Height="42" Margin="0 0 0 8"
+                        Background="White" BorderBrush="#DADCE0" BorderThickness="1" Cursor="Hand">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Text="G" FontSize="18" FontWeight="Bold" Foreground="#4285F4" Margin="0 0 8 0"/>
-                        <TextBlock Text="Google" Foreground="#333" FontSize="14"/>
+                        <TextBlock Text="G" FontSize="20" FontWeight="Bold" Foreground="#4285F4"
+                                   Margin="0 0 8 0" FontFamily="Georgia"/>
+                        <TextBlock Text="Continuar con Google" Foreground="#333" FontSize="13"
+                                   VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-                <Button Command="{Binding LoginWithMicrosoftCommand}" Height="44"
-                        Background="White" BorderBrush="#DDD" BorderThickness="1" Cursor="Hand">
+
+                <!-- Microsoft -->
+                <Button Command="{Binding LoginWithMicrosoftCommand}" Height="42"
+                        Background="White" BorderBrush="#DADCE0" BorderThickness="1" Cursor="Hand">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Text="M" FontSize="18" FontWeight="Bold" Foreground="#00A4EF" Margin="0 0 8 0"/>
-                        <TextBlock Text="Microsoft" Foreground="#333" FontSize="14"/>
+                        <Rectangle Width="20" Height="20" Margin="0 0 8 0" Fill="#00A4EF" RadiusX="4" RadiusY="4"/>
+                        <TextBlock Text="Continuar con Microsoft" Foreground="#333" FontSize="13"
+                                   VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
+
+                <!-- Versión y settings -->
+                <Border BorderBrush="#EEE" BorderThickness="0 1 0 0" Margin="0 14 0 8"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="v1.0.1" FontSize="10" Foreground="#BBB"
+                               VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Content="⚙️" FontSize="14"
+                            Background="Transparent" BorderThickness="0"
+                            Cursor="Hand" Padding="2"
+                            ToolTip="Configuración del servidor"
+                            Command="{Binding OpenSettingsCommand}"/>
+                </Grid>
             </StackPanel>
         </Border>
     </Grid>

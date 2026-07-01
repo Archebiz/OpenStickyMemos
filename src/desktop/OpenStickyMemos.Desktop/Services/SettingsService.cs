@@ -27,6 +27,7 @@ public class ProviderSettings
 public interface ISettingsService
 {
     AppSettings Current { get; }
+    void Save(AppSettings settings);
 }
 
 public class SettingsService : ISettingsService
@@ -56,5 +57,17 @@ public class SettingsService : ISettingsService
         var envSignalR = Environment.GetEnvironmentVariable("SIGNALR_URL");
         if (!string.IsNullOrEmpty(envSignalR))
             Current.SignalRUrl = envSignalR;
+    }
+
+    public void Save(AppSettings settings)
+    {
+        var basePath = AppDomain.CurrentDomain.BaseDirectory;
+        var filePath = Path.Combine(basePath, "appsettings.json");
+        var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(filePath, json);
+        // Actualizar Current in-place (no reemplazar referencia)
+        Current.ApiUrl = settings.ApiUrl;
+        Current.SignalRUrl = settings.SignalRUrl;
+        Current.OAuth = settings.OAuth;
     }
 }
