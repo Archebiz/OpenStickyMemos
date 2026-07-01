@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Microsoft.Extensions.DependencyInjection;
 using OpenStickyMemos.Desktop.Services;
 using OpenStickyMemos.Desktop.ViewModels;
 
@@ -21,8 +22,15 @@ public partial class MainWindow : Window
 
     private void OnNavigationChanged(Type viewType)
     {
-        if (Activator.CreateInstance(viewType) is UserControl view)
-            MainContentArea.Content = view;
+        var view = App.Services.GetRequiredService(viewType) as UserControl;
+        if (view is null) return;
+
+        // Asignar ViewModel como DataContext por convención (LoginView → LoginViewModel)
+        var vmType = Type.GetType(viewType.FullName!.Replace("Views.", "ViewModels.").Replace("View", "ViewModel"));
+        if (vmType is not null)
+            view.DataContext = App.Services.GetRequiredService(vmType);
+
+        MainContentArea.Content = view;
     }
 
     private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
