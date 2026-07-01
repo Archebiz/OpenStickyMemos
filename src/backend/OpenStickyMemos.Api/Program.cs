@@ -124,6 +124,42 @@ app.UseSerilogRequestLogging();
 // OpenAPI disponible en todos los entornos
 app.MapOpenApi();
 
+// Middleware que agrega esquema Bearer al spec OpenAPI
+app.Use(async (ctx, next) =>
+{
+    if (ctx.Request.Path == "/openapi/v1.json")
+    {
+        var body = ctx.Response.Body;
+        using var buffer = new MemoryStream();
+        ctx.Response.Body = buffer;
+        await next();
+        buffer.Position = 0;
+        var json = await new StreamReader(buffer).ReadToEndAsync();
+        buffer.Position = 0;
+        var doc = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
+        doc["components"] ??= new System.Text.Json.Nodes.JsonObject();
+        doc["components"]!["securitySchemes"] = new System.Text.Json.Nodes.JsonObject
+        {
+            ["Bearer"] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["type"] = "http",
+                ["scheme"] = "bearer",
+                ["bearerFormat"] = "JWT",
+                ["description"] = "Token JWT de POST /api/auth/login"
+            }
+        };
+        doc["security"] = new System.Text.Json.Nodes.JsonArray
+        {
+            new System.Text.Json.Nodes.JsonObject { ["Bearer"] = new System.Text.Json.Nodes.JsonArray() }
+        };
+        ctx.Response.Body = body;
+        ctx.Response.ContentType = "application/json;charset=utf-8";
+        await ctx.Response.WriteAsync(doc.ToJsonString());
+        return;
+    }
+    await next();
+});
+
 // Swagger UI via CDN — https://localhost:5000/swagger
 app.MapGet("/swagger", () => Results.Content("""
 <!DOCTYPE html>
@@ -134,46 +170,11 @@ app.MapGet("/swagger", () => Results.Content("""
 <body>
 <div id="swagger-ui"></div>
 <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
 <script>
-// Plugin que agrega esquema Bearer al spec después de cargar
-const bearerPlugin = () => ({
-  statePlugins: {
-    spec: {
-      wrapActions: {
-        updateSpec: (oriAction) => (spec) => {
-          if (!spec) return oriAction(spec);
-          try {
-            let parsed = typeof spec === 'string' ? JSON.parse(spec) : spec;
-            if (parsed && parsed.openapi) {
-              parsed = JSON.parse(JSON.stringify(parsed)); // clonar
-              parsed.components = parsed.components || {};
-              parsed.components.securitySchemes = {
-                Bearer: {
-                  type: 'http',
-                  scheme: 'bearer',
-                  bearerFormat: 'JWT',
-                  description: 'Token JWT de POST /api/auth/login'
-                }
-              };
-              parsed.security = [{ Bearer: [] }];
-            }
-            return oriAction(parsed);
-          } catch (e) {
-            return oriAction(spec);
-          }
-        }
-      }
-    }
-  }
-});
-
 const ui = SwaggerUIBundle({
   url:'/openapi/v1.json',
   dom_id:'#swagger-ui',
-  presets:[SwaggerUIBundle.presets.apis,SwaggerUIBundle.SwaggerUIStandalonePreset],
-  layout:'StandaloneLayout',
-  plugins:[bearerPlugin],
+  presets:[SwaggerUIBundle.presets.apis],
   requestInterceptor: (req) => {
     const token = localStorage.getItem('osm_swagger_token');
     if (token) req.headers['Authorization'] = 'Bearer ' + token;
@@ -184,7 +185,6 @@ const ui = SwaggerUIBundle({
 window.authorizeSwagger = function(token) {
   ui.preauthorizeApiKey('Bearer', token);
   localStorage.setItem('osm_swagger_token', token);
-  alert('✅ Token guardado. Ahora puedes probar los endpoints.');
 };
 window.logoutSwagger = function() {
   ui.authActions.logout();
