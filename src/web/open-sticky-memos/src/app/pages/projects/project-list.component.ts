@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { ProjectResponse } from '../../models';
 
 @Component({
@@ -51,6 +52,37 @@ import { ProjectResponse } from '../../models';
         </div>
       }
 
+      <!-- Delete dialog -->
+      @if (showDeleteDialog && deleteTarget) {
+        <div class="dialog-overlay" (click)="showDeleteDialog = false">
+          <div class="dialog" (click)="$event.stopPropagation()">
+            <h4>Eliminar proyecto</h4>
+            <p class="delete-warning">
+              Esta acción no se puede deshacer.
+              Escribe <strong>{{ deleteTarget.name }}</strong> para confirmar:
+            </p>
+            <input
+              [(ngModel)]="deleteConfirmName"
+              placeholder="Nombre del proyecto"
+              class="input"
+              (keyup.enter)="confirmDelete()"
+            />
+            <div class="dialog-actions">
+              <button class="btn-secondary" (click)="showDeleteDialog = false">
+                Cancelar
+              </button>
+              <button
+                class="btn-danger"
+                [disabled]="deleteConfirmName !== deleteTarget.name || deleting"
+                (click)="confirmDelete()"
+              >
+                {{ deleting ? 'Eliminando...' : 'Eliminar' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
       @if (loading) {
         <div class="loading">Cargando proyectos...</div>
       } @else if (projects.length === 0) {
@@ -72,6 +104,13 @@ import { ProjectResponse } from '../../models';
               <div class="card-footer">
                 <span class="owner">{{ project.ownerName }}</span>
                 <span class="members">{{ project.memberCount }} miembros</span>
+                @if (project.ownerId === userId) {
+                  <button
+                    class="btn-delete"
+                    (click)="$event.stopPropagation(); openDeleteDialog(project)"
+                    title="Eliminar proyecto"
+                  >🗑️</button>
+                }
               </div>
             </div>
           }
@@ -226,6 +265,38 @@ import { ProjectResponse } from '../../models';
       .btn-secondary:hover {
         background: #e0e0e0;
       }
+      .btn-danger {
+        padding: 8px 20px;
+        border-radius: 8px;
+        border: none;
+        font-size: 14px;
+        cursor: pointer;
+        font-weight: 500;
+        background: #e74c3c;
+        color: white;
+      }
+      .btn-danger:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .btn-delete {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 2px 4px;
+        font-size: 14px;
+        opacity: 0.4;
+        transition: opacity 0.15s;
+      }
+      .btn-delete:hover {
+        opacity: 1;
+      }
+      .delete-warning {
+        font-size: 13px;
+        color: #888;
+        margin: 0 0 12px;
+        line-height: 1.5;
+      }
     `,
   ],
 })
@@ -237,10 +308,21 @@ export class ProjectListComponent implements OnInit {
   newProjectName = '';
   newProjectDesc = '';
 
+  // Delete state
+  showDeleteDialog = false;
+  deleteTarget: ProjectResponse | null = null;
+  deleteConfirmName = '';
+  deleting = false;
+
+  userId = '';
+
   constructor(
     private api: ApiService,
+    private auth: AuthService,
     private router: Router
-  ) {}
+  ) {
+    this.userId = this.auth.getStoredUser()?.id ?? '';
+  }
 
   ngOnInit(): void {
     this.loadProjects();
@@ -275,6 +357,27 @@ export class ProjectListComponent implements OnInit {
         },
         error: () => (this.creating = false),
       });
+  }
+
+  openDeleteDialog(project: ProjectResponse): void {
+    this.deleteTarget = project;
+    this.deleteConfirmName = '';
+    this.showDeleteDialog = true;
+  }
+
+  confirmDelete(): void {
+    if (!this.deleteTarget || this.deleteConfirmName !== this.deleteTarget.name || this.deleting) return;
+    this.deleting = true;
+    this.api.deleteProject(this.deleteTarget.id).subscribe({
+      next: () => {
+        this.projects = this.projects.filter((p) => p.id !== this.deleteTarget!.id);
+        this.showDeleteDialog = false;
+        this.deleteTarget = null;
+        this.deleteConfirmName = '';
+        this.deleting = false;
+      },
+      error: () => (this.deleting = false),
+    });
   }
 
   openProject(id: string): void {

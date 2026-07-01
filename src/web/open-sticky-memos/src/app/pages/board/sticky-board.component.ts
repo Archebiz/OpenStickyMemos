@@ -337,8 +337,8 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
       .createNote(this.projectId, {
         positionX: 50 + offset,
         positionY: 50 + offset,
-        width: 250,
-        height: 200,
+        width: 280,
+        height: 240,
         color: '#FFE066',
       })
       .subscribe({

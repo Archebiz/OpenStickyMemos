@@ -80,10 +80,11 @@ export interface NoteCardData {
                 class="pin-btn"
                 [class.active]="editPinned"
                 (click)="editPinned = !editPinned"
+                title="Fijar nota"
               >
                 📌
               </button>
-              <button class="save-btn" (click)="saveEdit()">✓</button>
+              <button class="save-btn" (click)="saveEdit()" title="Guardar">✓</button>
             </div>
           </div>
         </div>
@@ -203,10 +204,9 @@ export interface NoteCardData {
       }
       .edit-actions {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
+        flex-direction: column;
+        gap: 6px;
         margin-top: 8px;
-        gap: 4px;
       }
       .color-picker {
         display: flex;
@@ -226,6 +226,7 @@ export interface NoteCardData {
       .action-btns {
         display: flex;
         gap: 4px;
+        justify-content: flex-end;
       }
       .pin-btn,
       .save-btn {
