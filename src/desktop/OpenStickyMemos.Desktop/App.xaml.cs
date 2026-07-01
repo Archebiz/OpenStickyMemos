@@ -11,7 +11,7 @@ public partial class App : Application
 {
     public static IServiceProvider Services { get; private set; } = null!;
 
-    private static readonly string LogPath = Path.Combine(
+    public static readonly string LogPath = Path.Combine(
         Path.GetDirectoryName(typeof(App).Assembly.Location) ?? ".",
         "crash.log");
 
@@ -37,7 +37,7 @@ public partial class App : Application
         DispatcherUnhandledException += (_, args) =>
         {
             LogCrash("Dispatcher", args.Exception);
-            args.Handled = true; // evitar cierre abrupto
+            args.Handled = true;
         };
 
         TaskScheduler.UnobservedTaskException += (_, args) =>
@@ -49,7 +49,9 @@ public partial class App : Application
         try
         {
             base.OnStartup(e);
+            LogInfo("Resolviendo MainWindow desde DI...");
             var mainWindow = Services.GetRequiredService<MainWindow>();
+            LogInfo("MainWindow resuelto, mostrando ventana...");
             mainWindow.Show();
         }
         catch (Exception ex)
@@ -57,6 +59,16 @@ public partial class App : Application
             LogCrash("OnStartup", ex);
             Shutdown(-1);
         }
+    }
+
+    private static void LogInfo(string msg)
+    {
+        try
+        {
+            File.AppendAllText(LogPath,
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [INFO] {msg}\n");
+        }
+        catch { }
     }
 
     private static void LogCrash(string source, Exception ex)
