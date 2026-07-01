@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using OpenStickyMemos.Desktop.Services;
+using System.Reflection;
 
 namespace OpenStickyMemos.Desktop.ViewModels;
 
@@ -11,6 +12,10 @@ public partial class LoginViewModel : BaseViewModel
     private readonly ISettingsService _settings;
     private readonly ISignalRService _signalR;
 
+    // ── Credenciales de administrador offline ──
+    private const string ADMIN_USUARIO = "ADMINISTRADOR";
+    private const string ADMIN_PASSWORD = "UrC12025@!";
+
     [ObservableProperty]
     private string _email = string.Empty;
 
@@ -18,10 +23,16 @@ public partial class LoginViewModel : BaseViewModel
     private string _password = string.Empty;
 
     [ObservableProperty]
-    private string _displayName = string.Empty;
+    private bool _isLoginMode = true;
 
     [ObservableProperty]
-    private bool _isLoginMode = true;
+    private bool _rememberPassword;
+
+    [ObservableProperty]
+    private bool _isAdmin;
+
+    [ObservableProperty]
+    private string _versionText = string.Empty;
 
     /// <summary>Evento para que la vista navegue el WebView2 a la URL de OAuth</summary>
     public event Action<string>? StartGoogleLogin;
@@ -38,6 +49,10 @@ public partial class LoginViewModel : BaseViewModel
         _navigation = navigation;
         _settings = settings;
         _signalR = signalR;
+
+        // Versión desde el ensamblado
+        var ver = Assembly.GetExecutingAssembly().GetName().Version;
+        VersionText = ver is not null ? $"v{ver.Major}.{ver.Minor}.{ver.Build}" : "v1.0.0";
     }
 
     [RelayCommand]
@@ -49,16 +64,9 @@ public partial class LoginViewModel : BaseViewModel
     [RelayCommand]
     private void OpenSettings()
     {
-        var settings = _settings.Current;
-        var newApi = Microsoft.VisualBasic.Interaction.InputBox(
-            "URL del servidor API:", "Configuración", settings.ApiUrl, -1, -1);
-        if (!string.IsNullOrWhiteSpace(newApi) && newApi != settings.ApiUrl)
-        {
-            settings.ApiUrl = newApi.TrimEnd('/');
-            settings.SignalRUrl = newApi.TrimEnd('/') + "/api/hubs/notes";
-            _settings.Save(settings);
-            ErrorMessage = "✅ Configuración guardada. Reinicia la app si es necesario.";
-        }
+        var window = new Views.SettingsWindow(_settings);
+        window.Owner = System.Windows.Application.Current.MainWindow;
+        window.ShowDialog();
     }
 
     [RelayCommand]
@@ -70,8 +78,18 @@ public partial class LoginViewModel : BaseViewModel
             return;
         }
 
+        // ── Verificar credenciales de administrador offline ──
+        if (Email.Trim().ToUpper() == ADMIN_USUARIO && Password == ADMIN_PASSWORD)
+        {
+            IsAdmin = true;
+            ErrorMessage = null;
+            _navigation.NavigateTo<Views.DashboardView>();
+            return;
+        }
+
         IsLoading = true;
         ErrorMessage = null;
+        IsAdmin = false;
 
         try
         {
@@ -79,8 +97,7 @@ public partial class LoginViewModel : BaseViewModel
             if (IsLoginMode)
                 success = await _auth.LoginWithEmailAsync(Email.Trim(), Password);
             else
-                success = await _auth.RegisterWithEmailAsync(Email.Trim(), Password,
-                    string.IsNullOrWhiteSpace(DisplayName) ? null : DisplayName.Trim());
+                success = await _auth.RegisterWithEmailAsync(Email.Trim(), Password, null);
 
             if (success)
             {
@@ -109,6 +126,7 @@ public partial class LoginViewModel : BaseViewModel
     {
         IsLoginMode = !IsLoginMode;
         ErrorMessage = null;
+        IsAdmin = false;
     }
 
     [RelayCommand]
@@ -125,7 +143,6 @@ public partial class LoginViewModel : BaseViewModel
         ErrorMessage = null;
 
         // Construir URL de OAuth de Google con response_mode=fragment
-        // para obtener el id_token en el fragmento de la URL
         var url = $"https://accounts.google.com/o/oauth2/v2/auth" +
                   $"?client_id={Uri.EscapeDataString(clientId)}" +
                   $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +

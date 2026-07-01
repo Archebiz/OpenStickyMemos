@@ -62,7 +62,7 @@ public partial class MainWindow : Window
             {
                 TitleBar.Visibility = Visibility.Collapsed;
                 MinWidth = 0; MinHeight = 0;
-                Width = 440; Height = 630;
+                Width = 400; Height = 640;
                 ResizeMode = ResizeMode.NoResize;
                 WindowStartupLocation = WindowStartupLocation.CenterScreen;
             }

@@ -1,6 +1,7 @@
 using System;
-using System.Windows.Controls;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using Microsoft.Web.WebView2.Core;
 using OpenStickyMemos.Desktop.ViewModels;
 
@@ -9,6 +10,7 @@ namespace OpenStickyMemos.Desktop.Views;
 public partial class LoginView : UserControl
 {
     private LoginViewModel? _vm;
+    private bool _passwordVisible;
 
     public LoginView()
     {
@@ -16,11 +18,72 @@ public partial class LoginView : UserControl
         Loaded += OnLoaded;
     }
 
-    private void TogglePasswordVisibility(object sender, RoutedEventArgs e)
+    // ── Placeholder management (patrón PACRI) ──
+    private static void SetupPlaceholder(TextBox tb, TextBlock ph)
     {
-        PasswordBox.PasswordChar = PasswordBox.PasswordChar == '\0' ? '•' : '\0';
-        (sender as System.Windows.Controls.Button).Content =
-            PasswordBox.PasswordChar == '\0' ? "🔓" : "👁️";
+        tb.TextChanged += (_, _) =>
+            ph.Visibility = string.IsNullOrEmpty(tb.Text) ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private static void SetupPlaceholder(PasswordBox pb, TextBlock ph)
+    {
+        pb.PasswordChanged += (_, _) =>
+            ph.Visibility = string.IsNullOrEmpty(pb.Password) ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // ── Toggle visibilidad de contraseña (patrón PACRI) ──
+    private void BtnTogglePassword_Click(object sender, RoutedEventArgs e)
+    {
+        _passwordVisible = !_passwordVisible;
+
+        if (_passwordVisible)
+        {
+            // Mostrar contraseña en TextBox
+            txtClaveVisible.Text = PasswordBox.Password;
+            PasswordBox.Visibility = Visibility.Collapsed;
+            txtClaveVisible.Visibility = Visibility.Visible;
+            PlaceholderPassword.Visibility = string.IsNullOrEmpty(txtClaveVisible.Text)
+                ? Visibility.Visible : Visibility.Collapsed;
+            ToggleIcon.Text = "\U0001F648"; // 🙈
+            txtClaveVisible.Focus();
+            txtClaveVisible.SelectionStart = txtClaveVisible.Text.Length;
+        }
+        else
+        {
+            // Ocultar contraseña en PasswordBox
+            PasswordBox.Password = txtClaveVisible.Text;
+            txtClaveVisible.Visibility = Visibility.Collapsed;
+            PasswordBox.Visibility = Visibility.Visible;
+            PlaceholderPassword.Visibility = string.IsNullOrEmpty(PasswordBox.Password)
+                ? Visibility.Visible : Visibility.Collapsed;
+            ToggleIcon.Text = "\U0001F441"; // 👁
+            PasswordBox.Focus();
+        }
+    }
+
+    private void TxtClave_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        PlaceholderPassword.Visibility = string.IsNullOrEmpty(PasswordBox.Password)
+            ? Visibility.Visible : Visibility.Collapsed;
+
+        if (_vm is not null)
+            _vm.Password = PasswordBox.Password;
+    }
+
+    // ── Sincronizar _vm.Password y placeholder desde txtClaveVisible ──
+    private void TxtClaveVisible_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        PlaceholderPassword.Visibility = string.IsNullOrEmpty(txtClaveVisible.Text)
+            ? Visibility.Visible : Visibility.Collapsed;
+        if (_vm is not null)
+            _vm.Password = txtClaveVisible.Text;
+    }
+
+    // ── Enter key → submit (patrón PACRI) ──
+    private void TxtClave_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && BtnSubmit.Command?.CanExecute(null) == true)
+            BtnSubmit.Command.Execute(null);
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -28,11 +91,21 @@ public partial class LoginView : UserControl
         _vm = DataContext as LoginViewModel;
         if (_vm is null) return;
 
-        PasswordBox.PasswordChar = '•';
-        PasswordBox.PasswordChanged += (_, _) =>
-        {
-            if (_vm is not null) _vm.Password = PasswordBox.Password;
-        };
+        // Inicializar placeholders inline (patrón PACRI)
+        SetupPlaceholder(TxtEmail, PlaceholderEmail);
+
+        // Forzar estado inicial del placeholder del email
+        PlaceholderEmail.Visibility = string.IsNullOrEmpty(TxtEmail.Text)
+            ? Visibility.Visible : Visibility.Collapsed;
+
+        // Sincronizar PasswordBox con ViewModel
+        PasswordBox.PasswordChanged += TxtClave_PasswordChanged;
+
+        // Sincronizar txtClaveVisible (modo ver contraseña) con ViewModel
+        txtClaveVisible.TextChanged += TxtClaveVisible_TextChanged;
+
+        // Focus inicial
+        TxtEmail.Focus();
 
         // Initialize WebView2
         await AuthWebView.EnsureCoreWebView2Async();

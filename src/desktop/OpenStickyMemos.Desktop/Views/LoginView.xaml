@@ -7,12 +7,208 @@
              xmlns:vm="clr-namespace:OpenStickyMemos.Desktop.ViewModels"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:LoginViewModel}">
+
+    <UserControl.Resources>
+        <!-- Animación de entrada -->
+        <Storyboard x:Key="FadeInSlideUp">
+            <DoubleAnimation Storyboard.TargetName="MainCard"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.5">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="CardTranslate"
+                             Storyboard.TargetProperty="Y"
+                             From="30" To="0" Duration="0:0:0.5">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+
+        <!-- Estilo base de TextBox moderno -->
+        <Style x:Key="ModernTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#1E293B"/>
+            <Setter Property="Foreground" Value="#F1F5F9"/>
+            <Setter Property="CaretBrush" Value="#06B6D4"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Height" Value="46"/>
+            <Setter Property="Padding" Value="44,0,40,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Margin="{TemplateBinding Padding}"
+                                          VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="#06B6D4"/>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="#06B6D4" BlurRadius="8" ShadowDepth="0" Opacity="0.5"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="#475569"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Estilo PasswordBox moderno -->
+        <Style x:Key="ModernPasswordBox" TargetType="PasswordBox">
+            <Setter Property="Background" Value="#1E293B"/>
+            <Setter Property="Foreground" Value="#F1F5F9"/>
+            <Setter Property="CaretBrush" Value="#06B6D4"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Height" Value="46"/>
+            <Setter Property="Padding" Value="44,0,52,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="PasswordBox">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Margin="{TemplateBinding Padding}"
+                                          VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="#06B6D4"/>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="#06B6D4" BlurRadius="8" ShadowDepth="0" Opacity="0.5"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="#475569"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Estilo CheckBox moderno -->
+        <Style x:Key="ModernCheckBox" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border x:Name="checkBorder"
+                                    Width="18" Height="18"
+                                    CornerRadius="4"
+                                    BorderBrush="#334155"
+                                    BorderThickness="1.5"
+                                    Background="#1E293B"
+                                    Margin="0,0,8,0">
+                                <Path x:Name="checkMark"
+                                      Data="M 2 9 L 7 14 L 16 3"
+                                      Stroke="#06B6D4"
+                                      StrokeThickness="2"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"
+                                      Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="checkMark" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="checkBorder" Property="BorderBrush" Value="#06B6D4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Estilo botón OAuth -->
+        <Style x:Key="OAuthButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#1E293B"/>
+                                <Setter TargetName="bg" Property="BorderBrush" Value="#475569"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bg" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Estilo botón inline (settings/close) -->
+        <Style x:Key="InlineIconButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#FFFFFF15"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Background="Transparent">
-        <!-- Loading overlay -->
-        <Border Background="White" Panel.ZIndex="10"
+        <!-- Loading overlay para WebView OAuth -->
+        <Border Background="#0F172A" Panel.ZIndex="10"
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="Iniciando sesion..." FontSize="16" Foreground="#888"/>
+                <TextBlock Text="Iniciando sesión..." FontSize="16" Foreground="#94A3B8"/>
             </StackPanel>
         </Border>
 
@@ -21,113 +217,343 @@
                       Visibility="{Binding ShowWebView, Converter={StaticResource BoolToVis}}"
                       Margin="0"/>
 
-        <!-- Card de login -->
-        <Border Width="380" Height="Auto" Padding="28" Background="White" CornerRadius="16"
-                HorizontalAlignment="Center" VerticalAlignment="Center"
-                Visibility="{Binding ShowWebView, Converter={StaticResource InvertBoolToVis}}"
-                Effect="{StaticResource CardShadow}">
-            <StackPanel>
-                <!-- Logo y título -->
-                <TextBlock Text="📝" FontSize="40" TextAlignment="Center"/>
-                <TextBlock Text="OpenStickyMemos" FontSize="20" FontWeight="SemiBold"
-                           TextAlignment="Center" Margin="0 4 0 2"/>
-                <TextBlock Text="Notas colaborativas en tiempo real" FontSize="12"
-                           Foreground="#999" TextAlignment="Center" Margin="0 0 0 16"/>
+        <!-- Fondo con gradiente oscuro -->
+        <Border Visibility="{Binding ShowWebView, Converter={StaticResource InvertBoolToVis}}">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#0F172A" Offset="0"/>
+                    <GradientStop Color="#1E3A5F" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
 
-                <!-- Email -->
-                <TextBlock Text="Correo electrónico" FontSize="11" FontWeight="SemiBold" Foreground="#666" Margin="0 0 0 4"/>
-                <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
-                         FontSize="13" Padding="10 9" Margin="0 0 0 12" BorderBrush="#DDD" BorderThickness="1"/>
+            <Grid>
+                <!-- Círculos decorativos de fondo -->
+                <Ellipse Width="300" Height="300"
+                         HorizontalAlignment="Left" VerticalAlignment="Top"
+                         Margin="-80,-80,0,0" Opacity="0.06">
+                    <Ellipse.Fill>
+                        <RadialGradientBrush>
+                            <GradientStop Color="#06B6D4" Offset="0"/>
+                            <GradientStop Color="Transparent" Offset="1"/>
+                        </RadialGradientBrush>
+                    </Ellipse.Fill>
+                </Ellipse>
 
-                <!-- Contraseña -->
-                <TextBlock Text="Contraseña" FontSize="11" FontWeight="SemiBold" Foreground="#666" Margin="0 0 0 4"/>
-                <Grid Margin="0 0 0 12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <PasswordBox x:Name="PasswordBox" Grid.Column="0"
-                                 FontSize="13" Padding="10 9" BorderBrush="#DDD" BorderThickness="1"/>
-                    <Button Grid.Column="1" Width="36" Height="36"
-                            Background="Transparent" BorderThickness="0"
-                            Cursor="Hand" FontSize="16"
-                            Click="TogglePasswordVisibility">👁️</Button>
-                </Grid>
+                <Ellipse Width="250" Height="250"
+                         HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                         Margin="0,0,-60,-60" Opacity="0.08">
+                    <Ellipse.Fill>
+                        <RadialGradientBrush>
+                            <GradientStop Color="#2563EB" Offset="0"/>
+                            <GradientStop Color="Transparent" Offset="1"/>
+                        </RadialGradientBrush>
+                    </Ellipse.Fill>
+                </Ellipse>
 
-                <!-- DisplayName (solo registro) -->
-                <StackPanel Visibility="{Binding IsLoginMode, Converter={StaticResource InvertBoolToVis}}">
-                    <TextBlock Text="Nombre (opcional)" FontSize="11" FontWeight="SemiBold" Foreground="#666" Margin="0 0 0 4"/>
-                    <TextBox Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}"
-                             FontSize="13" Padding="10 9" Margin="0 0 0 12" BorderBrush="#DDD" BorderThickness="1"/>
-                </StackPanel>
+                <!-- Card principal con glassmorphism -->
+                <Border x:Name="MainCard"
+                        Width="380"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        CornerRadius="16"
+                        Opacity="0"
+                        Padding="36,28,36,24">
+                    <Border.Background>
+                        <SolidColorBrush Color="#FFFFFF" Opacity="0.05"/>
+                    </Border.Background>
+                    <Border.BorderBrush>
+                        <SolidColorBrush Color="#FFFFFF" Opacity="0.12"/>
+                    </Border.BorderBrush>
+                    <Border.BorderThickness>1</Border.BorderThickness>
+                    <Border.RenderTransform>
+                        <TranslateTransform x:Name="CardTranslate" Y="30"/>
+                    </Border.RenderTransform>
 
-                <!-- Botón principal -->
-                <Button Command="{Binding LoginWithEmailCommand}" Height="38"
-                        Background="#667eea" Foreground="White" BorderThickness="0"
-                        Cursor="Hand" Margin="0 0 0 4" FontSize="14" FontWeight="SemiBold">
-                    <TextBlock Text="{Binding IsLoginMode, Converter={StaticResource LoginRegisterText}}"/>
-                </Button>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="16"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="14"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="20"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="14"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                <!-- Link login/register -->
-                <TextBlock Margin="0 6 0 0" TextAlignment="Center" FontSize="12">
-                    <Hyperlink Command="{Binding ToggleModeCommand}">
-                        <TextBlock Text="{Binding IsLoginMode, Converter={StaticResource ToggleLoginText}}"/>
-                    </Hyperlink>
-                </TextBlock>
+                        <!-- Cerrar (solo visible en modo registro/login normal) -->
+                        <Button Grid.Row="0"
+                                x:Name="btnCerrar"
+                                HorizontalAlignment="Right"
+                                Width="28" Height="28"
+                                Content="&#x2715;"
+                                FontSize="12"
+                                Foreground="#94A3B8"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                Style="{StaticResource InlineIconButton}"
+                                Command="{Binding CloseAppCommand}"
+                                Margin="0,-4,-4,0"/>
 
-                <!-- Error message -->
-                <TextBlock Text="{Binding ErrorMessage}" Foreground="#E74C3C" FontSize="11"
-                           TextAlignment="Center" Margin="0 6 0 0"/>
+                        <!-- Ícono + Título -->
+                        <StackPanel Grid.Row="1" HorizontalAlignment="Center" Margin="0,4,0,0">
+                            <!-- Ícono circular -->
+                            <Border Width="60" Height="60" CornerRadius="30"
+                                    HorizontalAlignment="Center" Margin="0,0,0,14">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#0EA5E9" Offset="0"/>
+                                        <GradientStop Color="#2563EB" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#0EA5E9" BlurRadius="16" ShadowDepth="0" Opacity="0.6"/>
+                                </Border.Effect>
+                                <TextBlock Text="&#x1F4DD;" FontSize="26"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
 
-                <!-- Divisor -->
-                <Border BorderBrush="#EEE" BorderThickness="0 1 0 0" Margin="0 14"/>
+                            <TextBlock Text="OpenStickyMemos"
+                                       Foreground="#F1F5F9"
+                                       FontFamily="Segoe UI"
+                                       FontSize="22"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Notas colaborativas en tiempo real"
+                                       Foreground="#64748B"
+                                       FontFamily="Segoe UI"
+                                       FontSize="12"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
 
-                <TextBlock Text="o continúa con" FontSize="11" Foreground="#AAA"
-                           TextAlignment="Center" Margin="0 0 0 10"/>
+                        <!-- Campo Email -->
+                        <Grid Grid.Row="3">
+                            <TextBox x:Name="TxtEmail"
+                                     Style="{StaticResource ModernTextBox}"
+                                     Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
+                                     KeyDown="TxtClave_KeyDown"/>
+                            <!-- Ícono email -->
+                            <TextBlock Text="&#x2709;"
+                                       FontSize="14"
+                                       Foreground="#64748B"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Left"
+                                       Margin="14,0,0,0"
+                                       IsHitTestVisible="False"/>
+                            <!-- Placeholder -->
+                            <TextBlock x:Name="PlaceholderEmail"
+                                       Text="Correo electrónico"
+                                       Foreground="#4B5563"
+                                       FontFamily="Segoe UI"
+                                       FontSize="13"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Left"
+                                       Margin="44,0,0,0"
+                                       IsHitTestVisible="False"/>
+                        </Grid>
 
-                <!-- Google -->
-                <Button Command="{Binding LoginWithGoogleCommand}" Height="42" Margin="0 0 0 8"
-                        Background="White" BorderBrush="#DADCE0" BorderThickness="1" Cursor="Hand">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Text="G" FontSize="20" FontWeight="Bold" Foreground="#4285F4"
-                                   Margin="0 0 8 0" FontFamily="Georgia"/>
-                        <TextBlock Text="Continuar con Google" Foreground="#333" FontSize="13"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                        <!-- Campo Contraseña -->
+                        <Grid Grid.Row="5">
+                            <!-- PasswordBox visible -->
+                            <PasswordBox x:Name="PasswordBox"
+                                         Style="{StaticResource ModernPasswordBox}"
+                                         KeyDown="TxtClave_KeyDown"
+                                         PasswordChanged="TxtClave_PasswordChanged"/>
+                            <!-- TextBox para modo "ver contraseña" -->
+                            <TextBox x:Name="txtClaveVisible"
+                                     Style="{StaticResource ModernTextBox}"
+                                     Padding="44,0,52,0"
+                                     Visibility="Collapsed"
+                                     KeyDown="TxtClave_KeyDown"/>
+                            <!-- Ícono llave -->
+                            <TextBlock Text="&#x1F511;"
+                                       FontSize="14"
+                                       Foreground="#64748B"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Left"
+                                       Margin="14,0,0,0"
+                                       IsHitTestVisible="False"/>
+                            <!-- Placeholder contraseña -->
+                            <TextBlock x:Name="PlaceholderPassword"
+                                       Text="Contraseña"
+                                       Foreground="#4B5563"
+                                       FontFamily="Segoe UI"
+                                       FontSize="13"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Left"
+                                       Margin="44,0,0,0"
+                                       IsHitTestVisible="False"/>
+                            <!-- Toggle ver/ocultar -->
+                            <Button x:Name="btnTogglePassword"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,10,0"
+                                    Width="32" Height="32"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Cursor="Hand"
+                                    Style="{StaticResource InlineIconButton}"
+                                    Click="BtnTogglePassword_Click">
+                                <TextBlock x:Name="ToggleIcon"
+                                           Text="&#x1F441;"
+                                           FontSize="16"
+                                           Foreground="#94A3B8"/>
+                            </Button>
+                        </Grid>
 
-                <!-- Microsoft -->
-                <Button Command="{Binding LoginWithMicrosoftCommand}" Height="42"
-                        Background="White" BorderBrush="#DADCE0" BorderThickness="1" Cursor="Hand">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Rectangle Width="20" Height="20" Margin="0 0 8 0" Fill="#00A4EF" RadiusX="4" RadiusY="4"/>
-                        <TextBlock Text="Continuar con Microsoft" Foreground="#333" FontSize="13"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                        <!-- Recordar contraseña -->
+                        <CheckBox Grid.Row="7"
+                                  x:Name="chkRecordarPassword"
+                                  Content="Recordar contraseña"
+                                  Style="{StaticResource ModernCheckBox}"
+                                  IsChecked="{Binding RememberPassword}"/>
 
-                <!-- Versión y settings -->
-                <Border BorderBrush="#EEE" BorderThickness="0 1 0 0" Margin="0 14 0 8"/>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="v1.0.2" FontSize="10" Foreground="#BBB"
-                               VerticalAlignment="Center"/>
-                    <Button Grid.Column="1" Content="⚙️" FontSize="14"
-                            Background="Transparent" BorderThickness="0"
-                            Cursor="Hand" Padding="4"
-                            ToolTip="Configuración del servidor"
-                            Command="{Binding OpenSettingsCommand}"/>
-                    <Button Grid.Column="2" Content="✕" FontSize="12" Width="28" Height="28"
-                            Background="Transparent" BorderThickness="0"
-                            Cursor="Hand" Foreground="#999"
-                            Command="{Binding CloseAppCommand}"
-                            ToolTip="Cerrar"/>
-                </Grid>
-            </StackPanel>
+                        <!-- Botón Ingresar -->
+                        <Button Grid.Row="9"
+                                x:Name="BtnSubmit"
+                                Height="48"
+                                Cursor="Hand"
+                                Command="{Binding LoginWithEmailCommand}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="btnBorder" CornerRadius="10">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                <GradientStop Color="#0EA5E9" Offset="0"/>
+                                                <GradientStop Color="#2563EB" Offset="1"/>
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="#0EA5E9"
+                                                              BlurRadius="16"
+                                                              ShadowDepth="0"
+                                                              Opacity="0.4"/>
+                                        </Border.Effect>
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="btnBorder" Property="Opacity" Value="0.9"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="btnBorder" Property="Opacity" Value="0.8"/>
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter TargetName="btnBorder" Property="Opacity" Value="0.5"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <Grid>
+                                <!-- Texto normal -->
+                                <StackPanel x:Name="pnlNormal" Orientation="Horizontal"
+                                            Visibility="{Binding IsLoading, Converter={StaticResource InvertBoolToVis}}">
+                                    <TextBlock Text="{Binding IsLoginMode, Converter={StaticResource LoginRegisterText}}"
+                                               Foreground="White"
+                                               FontFamily="Segoe UI"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="  →"
+                                               Foreground="White"
+                                               FontSize="14"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <!-- Loading -->
+                                <StackPanel x:Name="pnlLoading" Orientation="Horizontal" HorizontalAlignment="Center"
+                                            Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="Iniciando sesión..."
+                                               Foreground="White"
+                                               FontFamily="Segoe UI"
+                                               FontSize="13"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                        </Button>
+
+                        <!-- Link login/register -->
+                        <TextBlock Grid.Row="11" Margin="0,6,0,0" TextAlignment="Center" FontSize="12">
+                            <Hyperlink Command="{Binding ToggleModeCommand}">
+                                <TextBlock Text="{Binding IsLoginMode, Converter={StaticResource ToggleLoginText}}"
+                                           Foreground="#94A3B8"/>
+                            </Hyperlink>
+                        </TextBlock>
+
+                        <!-- Error message -->
+                        <TextBlock Grid.Row="12"
+                                   Text="{Binding ErrorMessage}" Foreground="#EF4444" FontSize="11"
+                                   TextAlignment="Center" Margin="0,6,0,0"
+                                   Visibility="{Binding ErrorMessage, Converter={StaticResource NotNullToVis}}"/>
+
+                        <!-- Indicador admin -->
+                        <TextBlock Grid.Row="13"
+                                   Text="Acceso administrador: USUARIO: ADMINISTRADOR / CLAVE: UrC12025@!"
+                                   Foreground="#4B5563" FontSize="9"
+                                   TextAlignment="Center" Margin="0,0,0,0"
+                                   Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}"/>
+
+                        <!-- Divisor -->
+                        <Border Grid.Row="14" BorderBrush="#FFFFFF15" BorderThickness="0 1 0 0" Margin="0,14,0,0"/>
+
+                        <!-- Sección OAuth -->
+                        <StackPanel Grid.Row="15" Margin="0,14,0,0">
+                            <TextBlock Text="o continúa con" FontSize="11" Foreground="#64748B"
+                                       TextAlignment="Center" Margin="0,0,0,10"/>
+
+                            <!-- Google -->
+                            <Button Command="{Binding LoginWithGoogleCommand}" Margin="0,0,0,8"
+                                    Style="{StaticResource OAuthButtonStyle}">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="G" FontSize="20" FontWeight="Bold" Foreground="#4285F4"
+                                               Margin="0,0,8,0" FontFamily="Georgia"/>
+                                    <TextBlock Text="Continuar con Google" Foreground="#CBD5E1" FontSize="13"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Microsoft -->
+                            <Button Command="{Binding LoginWithMicrosoftCommand}"
+                                    Style="{StaticResource OAuthButtonStyle}">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Rectangle Width="20" Height="20" Margin="0,0,8,0" Fill="#00A4EF" RadiusX="4" RadiusY="4"/>
+                                    <TextBlock Text="Continuar con Microsoft" Foreground="#CBD5E1" FontSize="13"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- Versión y settings -->
+                        <Grid Grid.Row="16" Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding VersionText}" FontSize="10" Foreground="#4B5563"
+                                       VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Content="&#x2699;&#xFE0F;" FontSize="14"
+                                    Style="{StaticResource InlineIconButton}" Padding="4"
+                                    Command="{Binding OpenSettingsCommand}"/>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
         </Border>
     </Grid>
+
+    <UserControl.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard Storyboard="{StaticResource FadeInSlideUp}"/>
+        </EventTrigger>
+    </UserControl.Triggers>
 </UserControl>
