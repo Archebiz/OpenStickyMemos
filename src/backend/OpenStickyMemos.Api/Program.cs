@@ -1,6 +1,7 @@
 using System.Text;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using OpenStickyMemos.Api.Data;
@@ -8,6 +9,12 @@ using OpenStickyMemos.Api.Services;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── Forwarded Headers (Railway proxy HTTPS → HTTP interno) ──
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
 
 // ── Serilog ──
 builder.Host.UseSerilog((ctx, cfg) =>
@@ -119,12 +126,13 @@ logger.LogInformation("OpenAPI JSON at: /openapi/v1.json");
 logger.LogInformation("Swagger UI at: /swagger");
 
 // ── Pipeline ──
+app.UseForwardedHeaders();
 app.UseSerilogRequestLogging();
 
 // OpenAPI disponible en todos los entornos
 app.MapOpenApi();
 
-// Middleware que agrega esquema Bearer al spec OpenAPI
+// Middleware que agrega esquema Bearer al spec OpenAPI y corrige URLs a HTTPS
 app.Use(async (ctx, next) =>
 {
     if (ctx.Request.Path == "/openapi/v1.json")
@@ -135,8 +143,21 @@ app.Use(async (ctx, next) =>
         await next();
         buffer.Position = 0;
         var json = await new StreamReader(buffer).ReadToEndAsync();
-        buffer.Position = 0;
         var doc = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
+
+        // Forzar scheme HTTPS en servers
+        if (doc["servers"] is System.Text.Json.Nodes.JsonArray servers)
+        {
+            foreach (var srv in servers.OfType<System.Text.Json.Nodes.JsonObject>())
+            {
+                if (srv["url"]?.GetValue<string>() is string url && url.StartsWith("http://"))
+                {
+                    srv["url"] = "https://" + url[7..];
+                }
+            }
+        }
+
+        // Agregar esquema Bearer
         doc["components"] ??= new System.Text.Json.Nodes.JsonObject();
         doc["components"]!["securitySchemes"] = new System.Text.Json.Nodes.JsonObject
         {
@@ -152,6 +173,7 @@ app.Use(async (ctx, next) =>
         {
             new System.Text.Json.Nodes.JsonObject { ["Bearer"] = new System.Text.Json.Nodes.JsonArray() }
         };
+
         ctx.Response.Body = body;
         ctx.Response.ContentType = "application/json;charset=utf-8";
         await ctx.Response.WriteAsync(doc.ToJsonString());
