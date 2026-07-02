@@ -13,14 +13,18 @@
         <Storyboard x:Key="FadeInSlideUp">
             <DoubleAnimation Storyboard.TargetName="MainCard"
                              Storyboard.TargetProperty="Opacity"
-                             From="0" To="1" Duration="0:0:0.5">
+                             From="0"
+                    To="1"
+                    Duration="0:0:0.5">
                 <DoubleAnimation.EasingFunction>
                     <CubicEase EasingMode="EaseOut"/>
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
             <DoubleAnimation Storyboard.TargetName="CardTranslate"
                              Storyboard.TargetProperty="Y"
-                             From="30" To="0" Duration="0:0:0.5">
+                             From="30"
+                    To="0"
+                    Duration="0:0:0.5">
                 <DoubleAnimation.EasingFunction>
                     <CubicEase EasingMode="EaseOut"/>
                 </DoubleAnimation.EasingFunction>
@@ -28,17 +32,28 @@
         </Storyboard>
 
         <!-- Estilo base de TextBox moderno -->
-        <Style x:Key="ModernTextBox" TargetType="TextBox">
-            <Setter Property="Background" Value="#1E293B"/>
-            <Setter Property="Foreground" Value="#F1F5F9"/>
-            <Setter Property="CaretBrush" Value="#06B6D4"/>
-            <Setter Property="BorderBrush" Value="#334155"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Height" Value="46"/>
-            <Setter Property="Padding" Value="44,0,40,0"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Style x:Key="ModernTextBox"
+                TargetType="TextBox">
+            <Setter Property="Background"
+                    Value="#1E293B"/>
+            <Setter Property="Foreground"
+                    Value="#F1F5F9"/>
+            <Setter Property="CaretBrush"
+                    Value="#06B6D4"/>
+            <Setter Property="BorderBrush"
+                    Value="#334155"/>
+            <Setter Property="BorderThickness"
+                    Value="1"/>
+            <Setter Property="FontFamily"
+                    Value="Segoe UI"/>
+            <Setter Property="FontSize"
+                    Value="13"/>
+            <Setter Property="Height"
+                    Value="46"/>
+            <Setter Property="Padding"
+                    Value="22,0,40,0"/>
+            <Setter Property="VerticalContentAlignment"
+                    Value="Center"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
@@ -52,16 +67,26 @@
                                           VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="#06B6D4"/>
-                                <Setter TargetName="border" Property="Effect">
+                            <Trigger Property="IsFocused"
+                                    Value="True">
+                                <Setter TargetName="border"
+                                        Property="BorderBrush"
+                                        Value="#06B6D4"/>
+                                <Setter TargetName="border"
+                                        Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect Color="#06B6D4" BlurRadius="8" ShadowDepth="0" Opacity="0.5"/>
+                                        <DropShadowEffect Color="#06B6D4"
+                                                BlurRadius="8"
+                                                ShadowDepth="0"
+                                                Opacity="0.5"/>
                                     </Setter.Value>
                                 </Setter>
                             </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="#475569"/>
+                            <Trigger Property="IsMouseOver"
+                                    Value="True">
+                                <Setter TargetName="border"
+                                        Property="BorderBrush"
+                                        Value="#475569"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -70,17 +95,28 @@
         </Style>
 
         <!-- Estilo PasswordBox moderno -->
-        <Style x:Key="ModernPasswordBox" TargetType="PasswordBox">
-            <Setter Property="Background" Value="#1E293B"/>
-            <Setter Property="Foreground" Value="#F1F5F9"/>
-            <Setter Property="CaretBrush" Value="#06B6D4"/>
-            <Setter Property="BorderBrush" Value="#334155"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Height" Value="46"/>
-            <Setter Property="Padding" Value="44,0,52,0"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Style x:Key="ModernPasswordBox"
+                TargetType="PasswordBox">
+            <Setter Property="Background"
+                    Value="#1E293B"/>
+            <Setter Property="Foreground"
+                    Value="#F1F5F9"/>
+            <Setter Property="CaretBrush"
+                    Value="#06B6D4"/>
+            <Setter Property="BorderBrush"
+                    Value="#334155"/>
+            <Setter Property="BorderThickness"
+                    Value="1"/>
+            <Setter Property="FontFamily"
+                    Value="Segoe UI"/>
+            <Setter Property="FontSize"
+                    Value="13"/>
+            <Setter Property="Height"
+                    Value="46"/>
+            <Setter Property="Padding"
+                    Value="22,0,52,0"/>
+            <Setter Property="VerticalContentAlignment"
+                    Value="Center"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="PasswordBox">
@@ -94,16 +130,26 @@
                                           VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="#06B6D4"/>
-                                <Setter TargetName="border" Property="Effect">
+                            <Trigger Property="IsFocused"
+                                    Value="True">
+                                <Setter TargetName="border"
+                                        Property="BorderBrush"
+                                        Value="#06B6D4"/>
+                                <Setter TargetName="border"
+                                        Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect Color="#06B6D4" BlurRadius="8" ShadowDepth="0" Opacity="0.5"/>
+                                        <DropShadowEffect Color="#06B6D4"
+                                                BlurRadius="8"
+                                                ShadowDepth="0"
+                                                Opacity="0.5"/>
                                     </Setter.Value>
                                 </Setter>
                             </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="#475569"/>
+                            <Trigger Property="IsMouseOver"
+                                    Value="True">
+                                <Setter TargetName="border"
+                                        Property="BorderBrush"
+                                        Value="#475569"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -112,17 +158,24 @@
         </Style>
 
         <!-- Estilo CheckBox moderno -->
-        <Style x:Key="ModernCheckBox" TargetType="CheckBox">
-            <Setter Property="Foreground" Value="#94A3B8"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Cursor" Value="Hand"/>
+        <Style x:Key="ModernCheckBox"
+                TargetType="CheckBox">
+            <Setter Property="Foreground"
+                    Value="#94A3B8"/>
+            <Setter Property="FontFamily"
+                    Value="Segoe UI"/>
+            <Setter Property="FontSize"
+                    Value="12"/>
+            <Setter Property="Cursor"
+                    Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center">
                             <Border x:Name="checkBorder"
-                                    Width="18" Height="18"
+                                    Width="18"
+                                    Height="18"
                                     CornerRadius="4"
                                     BorderBrush="#334155"
                                     BorderThickness="1.5"
@@ -140,9 +193,14 @@
                             <ContentPresenter VerticalAlignment="Center"/>
                         </StackPanel>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="checkMark" Property="Visibility" Value="Visible"/>
-                                <Setter TargetName="checkBorder" Property="BorderBrush" Value="#06B6D4"/>
+                            <Trigger Property="IsChecked"
+                                    Value="True">
+                                <Setter TargetName="checkMark"
+                                        Property="Visibility"
+                                        Value="Visible"/>
+                                <Setter TargetName="checkBorder"
+                                        Property="BorderBrush"
+                                        Value="#06B6D4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -151,12 +209,18 @@
         </Style>
 
         <!-- Estilo botón OAuth -->
-        <Style x:Key="OAuthButtonStyle" TargetType="Button">
-            <Setter Property="Height" Value="42"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#334155"/>
+        <Style x:Key="OAuthButtonStyle"
+                TargetType="Button">
+            <Setter Property="Height"
+                    Value="42"/>
+            <Setter Property="Cursor"
+                    Value="Hand"/>
+            <Setter Property="Background"
+                    Value="Transparent"/>
+            <Setter Property="BorderThickness"
+                    Value="1"/>
+            <Setter Property="BorderBrush"
+                    Value="#334155"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -165,15 +229,24 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="8">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bg" Property="Background" Value="#1E293B"/>
-                                <Setter TargetName="bg" Property="BorderBrush" Value="#475569"/>
+                            <Trigger Property="IsMouseOver"
+                                    Value="True">
+                                <Setter TargetName="bg"
+                                        Property="Background"
+                                        Value="#1E293B"/>
+                                <Setter TargetName="bg"
+                                        Property="BorderBrush"
+                                        Value="#475569"/>
                             </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bg" Property="Opacity" Value="0.8"/>
+                            <Trigger Property="IsPressed"
+                                    Value="True">
+                                <Setter TargetName="bg"
+                                        Property="Opacity"
+                                        Value="0.8"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -182,19 +255,29 @@
         </Style>
 
         <!-- Estilo botón inline (settings/close) -->
-        <Style x:Key="InlineIconButton" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
+        <Style x:Key="InlineIconButton"
+                TargetType="Button">
+            <Setter Property="Background"
+                    Value="Transparent"/>
+            <Setter Property="BorderThickness"
+                    Value="0"/>
+            <Setter Property="Cursor"
+                    Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bg" Background="{TemplateBinding Background}" CornerRadius="6">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border x:Name="bg"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bg" Property="Background" Value="#FFFFFF15"/>
+                            <Trigger Property="IsMouseOver"
+                                    Value="True">
+                                <Setter TargetName="bg"
+                                        Property="Background"
+                                        Value="#FFFFFF15"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -205,10 +288,14 @@
 
     <Grid Background="Transparent">
         <!-- Loading overlay para WebView OAuth -->
-        <Border Background="#0F172A" Panel.ZIndex="10"
+        <Border Background="#0F172A"
+                Panel.ZIndex="10"
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="Iniciando sesión..." FontSize="16" Foreground="#94A3B8"/>
+            <StackPanel HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <TextBlock Text="Iniciando sesión..."
+                        FontSize="16"
+                        Foreground="#94A3B8"/>
             </StackPanel>
         </Border>
 
@@ -220,32 +307,45 @@
         <!-- Fondo con gradiente oscuro -->
         <Border Visibility="{Binding ShowWebView, Converter={StaticResource InvertBoolToVis}}">
             <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#0F172A" Offset="0"/>
-                    <GradientStop Color="#1E3A5F" Offset="1"/>
+                <LinearGradientBrush StartPoint="0,0"
+                        EndPoint="1,1">
+                    <GradientStop Color="#0F172A"
+                            Offset="0"/>
+                    <GradientStop Color="#1E3A5F"
+                            Offset="1"/>
                 </LinearGradientBrush>
             </Border.Background>
 
             <Grid>
                 <!-- Círculos decorativos de fondo -->
-                <Ellipse Width="300" Height="300"
-                         HorizontalAlignment="Left" VerticalAlignment="Top"
-                         Margin="-80,-80,0,0" Opacity="0.06">
+                <Ellipse Width="300"
+                        Height="300"
+                         HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                         Margin="-80,-80,0,0"
+                        Opacity="0.06">
                     <Ellipse.Fill>
                         <RadialGradientBrush>
-                            <GradientStop Color="#06B6D4" Offset="0"/>
-                            <GradientStop Color="Transparent" Offset="1"/>
+                            <GradientStop Color="#06B6D4"
+                                    Offset="0"/>
+                            <GradientStop Color="Transparent"
+                                    Offset="1"/>
                         </RadialGradientBrush>
                     </Ellipse.Fill>
                 </Ellipse>
 
-                <Ellipse Width="250" Height="250"
-                         HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                         Margin="0,0,-60,-60" Opacity="0.08">
+                <Ellipse Width="250"
+                        Height="250"
+                         HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                         Margin="0,0,-60,-60"
+                        Opacity="0.08">
                     <Ellipse.Fill>
                         <RadialGradientBrush>
-                            <GradientStop Color="#2563EB" Offset="0"/>
-                            <GradientStop Color="Transparent" Offset="1"/>
+                            <GradientStop Color="#2563EB"
+                                    Offset="0"/>
+                            <GradientStop Color="Transparent"
+                                    Offset="1"/>
                         </RadialGradientBrush>
                     </Ellipse.Fill>
                 </Ellipse>
@@ -259,21 +359,26 @@
                         Opacity="0"
                         Padding="36,28,36,24">
                     <Border.Background>
-                        <SolidColorBrush Color="#FFFFFF" Opacity="0.05"/>
+                        <SolidColorBrush Color="#FFFFFF"
+                                Opacity="0.05"/>
                     </Border.Background>
                     <Border.BorderBrush>
-                        <SolidColorBrush Color="#FFFFFF" Opacity="0.12"/>
+                        <SolidColorBrush Color="#FFFFFF"
+                                Opacity="0.12"/>
                     </Border.BorderBrush>
                     <Border.BorderThickness>1</Border.BorderThickness>
                     <Border.RenderTransform>
-                        <TranslateTransform x:Name="CardTranslate" Y="30"/>
+                        <TranslateTransform x:Name="CardTranslate"
+                                Y="30"/>
                     </Border.RenderTransform>
 
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="16"/>
+                            <RowDefinition Height="10"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="12"/>
                             <RowDefinition Height="Auto"/>
@@ -283,41 +388,75 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="12"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="14"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Cerrar (solo visible en modo registro/login normal) -->
-                        <Button Grid.Row="0"
-                                x:Name="btnCerrar"
-                                HorizontalAlignment="Right"
-                                Width="28" Height="28"
-                                Content="&#x2715;"
-                                FontSize="12"
-                                Foreground="#94A3B8"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Cursor="Hand"
-                                Style="{StaticResource InlineIconButton}"
-                                Command="{Binding CloseAppCommand}"
-                                Margin="0,-4,-4,0"/>
+                        <!-- Settings + Versión + Cerrar -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0"
+                                    Content="&#x2699;&#xFE0F;"
+                                    FontSize="14"
+                                    Style="{StaticResource InlineIconButton}"
+                                    Padding="4"
+                                    Margin="-4,-4,0,0"
+                                    Command="{Binding OpenSettingsCommand}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding VersionText}"
+                                       FontSize="10"
+                                       Foreground="#4B5563"
+                                       VerticalAlignment="Center"
+                                       Margin="4,6,0,0"/>
+                            <Button Grid.Column="2"
+                                    x:Name="btnCerrar"
+                                    HorizontalAlignment="Right"
+                                    Width="28"
+                                    Height="28"
+                                    Content="&#x2715;"
+                                    FontSize="12"
+                                    Foreground="#94A3B8"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Cursor="Hand"
+                                    Style="{StaticResource InlineIconButton}"
+                                    Command="{Binding CloseAppCommand}"
+                                    Margin="0,-4,-4,0"/>
+                        </Grid>
 
                         <!-- Ícono + Título -->
-                        <StackPanel Grid.Row="1" HorizontalAlignment="Center" Margin="0,4,0,0">
+                        <StackPanel Grid.Row="1"
+                                HorizontalAlignment="Center"
+                                Margin="0,4,0,0">
                             <!-- Ícono circular -->
-                            <Border Width="60" Height="60" CornerRadius="30"
-                                    HorizontalAlignment="Center" Margin="0,0,0,14">
+                            <Border Width="60"
+                                    Height="60"
+                                    CornerRadius="30"
+                                    HorizontalAlignment="Center"
+                                    Margin="0,0,0,14">
                                 <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                        <GradientStop Color="#0EA5E9" Offset="0"/>
-                                        <GradientStop Color="#2563EB" Offset="1"/>
+                                    <LinearGradientBrush StartPoint="0,0"
+                                            EndPoint="1,1">
+                                        <GradientStop Color="#0EA5E9"
+                                                Offset="0"/>
+                                        <GradientStop Color="#2563EB"
+                                                Offset="1"/>
                                     </LinearGradientBrush>
                                 </Border.Background>
                                 <Border.Effect>
-                                    <DropShadowEffect Color="#0EA5E9" BlurRadius="16" ShadowDepth="0" Opacity="0.6"/>
+                                    <DropShadowEffect Color="#0EA5E9"
+                                            BlurRadius="16"
+                                            ShadowDepth="0"
+                                            Opacity="0.6"/>
                                 </Border.Effect>
-                                <TextBlock Text="&#x1F4DD;" FontSize="26"
+                                <TextBlock Text="&#x1F4DD;"
+                                        FontSize="26"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"/>
                             </Border>
@@ -336,8 +475,49 @@
                                        Margin="0,4,0,0"/>
                         </StackPanel>
 
+                        <!-- Campo Nombre (solo en registro) -->
+                        <Grid Grid.Row="3"
+                              Visibility="{Binding IsLoginMode, Converter={StaticResource InvertBoolToVis}}">
+                            <TextBox x:Name="TxtNombre"
+                                     Style="{StaticResource ModernTextBox}"
+                                     Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}"
+                                     KeyDown="TxtClave_KeyDown"/>
+                            <!-- Ícono usuario -->
+                            <TextBlock Text="&#x1F464;"
+                                       FontSize="14"
+                                       Foreground="#64748B"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Left"
+                                       Margin="14,0,0,0"
+                                       IsHitTestVisible="False"/>
+                            <!-- Placeholder -->
+                            <TextBlock x:Name="PlaceholderNombre"
+                                       Text="Nombre completo"
+                                       Foreground="#4B5563"
+                                       FontFamily="Segoe UI"
+                                       FontSize="13"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Left"
+                                       Margin="44,0,0,0"
+                                       IsHitTestVisible="False">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text.Length, ElementName=TxtNombre}"
+                                                    Value="0">
+                                                <Setter Property="Visibility"
+                                                        Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                        <Setter Property="Visibility"
+                                                Value="Collapsed"/>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+
                         <!-- Campo Email -->
-                        <Grid Grid.Row="3">
+                        <Grid Grid.Row="5">
                             <TextBox x:Name="TxtEmail"
                                      Style="{StaticResource ModernTextBox}"
                                      Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
@@ -359,11 +539,25 @@
                                        VerticalAlignment="Center"
                                        HorizontalAlignment="Left"
                                        Margin="44,0,0,0"
-                                       IsHitTestVisible="False"/>
+                                       IsHitTestVisible="False">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text.Length, ElementName=TxtEmail}"
+                                                    Value="0">
+                                                <Setter Property="Visibility"
+                                                        Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                        <Setter Property="Visibility"
+                                                Value="Collapsed"/>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </Grid>
 
                         <!-- Campo Contraseña -->
-                        <Grid Grid.Row="5">
+                        <Grid Grid.Row="7">
                             <!-- PasswordBox visible -->
                             <PasswordBox x:Name="PasswordBox"
                                          Style="{StaticResource ModernPasswordBox}"
@@ -398,7 +592,8 @@
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
                                     Margin="0,0,10,0"
-                                    Width="32" Height="32"
+                                    Width="32"
+                                    Height="32"
                                     Background="Transparent"
                                     BorderThickness="0"
                                     Cursor="Hand"
@@ -412,25 +607,29 @@
                         </Grid>
 
                         <!-- Recordar contraseña -->
-                        <CheckBox Grid.Row="7"
+                        <CheckBox Grid.Row="9"
                                   x:Name="chkRecordarPassword"
                                   Content="Recordar contraseña"
                                   Style="{StaticResource ModernCheckBox}"
                                   IsChecked="{Binding RememberPassword}"/>
 
                         <!-- Botón Ingresar -->
-                        <Button Grid.Row="9"
+                        <Button Grid.Row="11"
                                 x:Name="BtnSubmit"
                                 Height="48"
                                 Cursor="Hand"
                                 Command="{Binding LoginWithEmailCommand}">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
-                                    <Border x:Name="btnBorder" CornerRadius="10">
+                                    <Border x:Name="btnBorder"
+                                            CornerRadius="10">
                                         <Border.Background>
-                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                <GradientStop Color="#0EA5E9" Offset="0"/>
-                                                <GradientStop Color="#2563EB" Offset="1"/>
+                                            <LinearGradientBrush StartPoint="0,0"
+                                                    EndPoint="1,0">
+                                                <GradientStop Color="#0EA5E9"
+                                                        Offset="0"/>
+                                                <GradientStop Color="#2563EB"
+                                                        Offset="1"/>
                                             </LinearGradientBrush>
                                         </Border.Background>
                                         <Border.Effect>
@@ -439,24 +638,35 @@
                                                               ShadowDepth="0"
                                                               Opacity="0.4"/>
                                         </Border.Effect>
-                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <ContentPresenter HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"/>
                                     </Border>
                                     <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="btnBorder" Property="Opacity" Value="0.9"/>
+                                        <Trigger Property="IsMouseOver"
+                                                Value="True">
+                                            <Setter TargetName="btnBorder"
+                                                    Property="Opacity"
+                                                    Value="0.9"/>
                                         </Trigger>
-                                        <Trigger Property="IsPressed" Value="True">
-                                            <Setter TargetName="btnBorder" Property="Opacity" Value="0.8"/>
+                                        <Trigger Property="IsPressed"
+                                                Value="True">
+                                            <Setter TargetName="btnBorder"
+                                                    Property="Opacity"
+                                                    Value="0.8"/>
                                         </Trigger>
-                                        <Trigger Property="IsEnabled" Value="False">
-                                            <Setter TargetName="btnBorder" Property="Opacity" Value="0.5"/>
+                                        <Trigger Property="IsEnabled"
+                                                Value="False">
+                                            <Setter TargetName="btnBorder"
+                                                    Property="Opacity"
+                                                    Value="0.5"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
                             </Button.Template>
                             <Grid>
                                 <!-- Texto normal -->
-                                <StackPanel x:Name="pnlNormal" Orientation="Horizontal"
+                                <StackPanel x:Name="pnlNormal"
+                                        Orientation="Horizontal"
                                             Visibility="{Binding IsLoading, Converter={StaticResource InvertBoolToVis}}">
                                     <TextBlock Text="{Binding IsLoginMode, Converter={StaticResource LoginRegisterText}}"
                                                Foreground="White"
@@ -470,7 +680,9 @@
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
                                 <!-- Loading -->
-                                <StackPanel x:Name="pnlLoading" Orientation="Horizontal" HorizontalAlignment="Center"
+                                <StackPanel x:Name="pnlLoading"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Center"
                                             Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="Iniciando sesión..."
                                                Foreground="White"
@@ -482,7 +694,10 @@
                         </Button>
 
                         <!-- Link login/register -->
-                        <TextBlock Grid.Row="11" Margin="0,6,0,0" TextAlignment="Center" FontSize="12">
+                        <TextBlock Grid.Row="13"
+                                Margin="0,6,0,0"
+                                TextAlignment="Center"
+                                FontSize="12">
                             <Hyperlink Command="{Binding ToggleModeCommand}">
                                 <TextBlock Text="{Binding IsLoginMode, Converter={StaticResource ToggleLoginText}}"
                                            Foreground="#94A3B8"/>
@@ -490,33 +705,44 @@
                         </TextBlock>
 
                         <!-- Error message -->
-                        <TextBlock Grid.Row="12"
-                                   Text="{Binding ErrorMessage}" Foreground="#EF4444" FontSize="11"
-                                   TextAlignment="Center" Margin="0,6,0,0"
+                        <TextBlock Grid.Row="14"
+                                   Text="{Binding ErrorMessage}"
+                                Foreground="#EF4444"
+                                FontSize="11"
+                                   TextAlignment="Center"
+                                Margin="0,6,0,0"
                                    Visibility="{Binding ErrorMessage, Converter={StaticResource NotNullToVis}}"/>
 
-                        <!-- Indicador admin -->
-                        <TextBlock Grid.Row="13"
-                                   Text="Acceso administrador: USUARIO: ADMINISTRADOR / CLAVE: UrC12025@!"
-                                   Foreground="#4B5563" FontSize="9"
-                                   TextAlignment="Center" Margin="0,0,0,0"
-                                   Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}"/>
-
                         <!-- Divisor -->
-                        <Border Grid.Row="14" BorderBrush="#FFFFFF15" BorderThickness="0 1 0 0" Margin="0,14,0,0"/>
+                        <Border Grid.Row="15"
+                                BorderBrush="#FFFFFF15"
+                                BorderThickness="0 1 0 0"
+                                Margin="0,14,0,0"/>
 
                         <!-- Sección OAuth -->
-                        <StackPanel Grid.Row="15" Margin="0,14,0,0">
-                            <TextBlock Text="o continúa con" FontSize="11" Foreground="#64748B"
-                                       TextAlignment="Center" Margin="0,0,0,10"/>
+                        <StackPanel Grid.Row="16"
+                                Margin="0,14,0,0">
+                            <TextBlock Text="o continúa con"
+                                    FontSize="11"
+                                    Foreground="#64748B"
+                                       TextAlignment="Center"
+                                    Margin="0,0,0,10"/>
 
                             <!-- Google -->
-                            <Button Command="{Binding LoginWithGoogleCommand}" Margin="0,0,0,8"
+                            <Button Command="{Binding LoginWithGoogleCommand}"
+                                    Margin="0,0,0,8"
                                     Style="{StaticResource OAuthButtonStyle}">
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <TextBlock Text="G" FontSize="20" FontWeight="Bold" Foreground="#4285F4"
-                                               Margin="0,0,8,0" FontFamily="Georgia"/>
-                                    <TextBlock Text="Continuar con Google" Foreground="#CBD5E1" FontSize="13"
+                                <StackPanel Orientation="Horizontal"
+                                        HorizontalAlignment="Center">
+                                    <TextBlock Text="G"
+                                            FontSize="20"
+                                            FontWeight="Bold"
+                                            Foreground="#4285F4"
+                                               Margin="0,0,8,0"
+                                            FontFamily="Georgia"/>
+                                    <TextBlock Text="Continuar con Google"
+                                            Foreground="#CBD5E1"
+                                            FontSize="13"
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
@@ -524,27 +750,23 @@
                             <!-- Microsoft -->
                             <Button Command="{Binding LoginWithMicrosoftCommand}"
                                     Style="{StaticResource OAuthButtonStyle}">
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <Rectangle Width="20" Height="20" Margin="0,0,8,0" Fill="#00A4EF" RadiusX="4" RadiusY="4"/>
-                                    <TextBlock Text="Continuar con Microsoft" Foreground="#CBD5E1" FontSize="13"
+                                <StackPanel Orientation="Horizontal"
+                                        HorizontalAlignment="Center">
+                                    <Rectangle Width="20"
+                                            Height="20"
+                                            Margin="0,0,8,0"
+                                            Fill="#00A4EF"
+                                            RadiusX="4"
+                                            RadiusY="4"/>
+                                    <TextBlock Text="Continuar con Microsoft"
+                                            Foreground="#CBD5E1"
+                                            FontSize="13"
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
 
-                        <!-- Versión y settings -->
-                        <Grid Grid.Row="16" Margin="0,14,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{Binding VersionText}" FontSize="10" Foreground="#4B5563"
-                                       VerticalAlignment="Center"/>
-                            <Button Grid.Column="1" Content="&#x2699;&#xFE0F;" FontSize="14"
-                                    Style="{StaticResource InlineIconButton}" Padding="4"
-                                    Command="{Binding OpenSettingsCommand}"/>
-                        </Grid>
+                        <!-- Settings (eliminado - ahora está en Row 0) -->
                     </Grid>
                 </Border>
             </Grid>

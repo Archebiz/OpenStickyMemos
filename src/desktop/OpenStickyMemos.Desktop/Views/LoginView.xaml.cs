@@ -25,11 +25,7 @@ public partial class LoginView : UserControl
             ph.Visibility = string.IsNullOrEmpty(tb.Text) ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private static void SetupPlaceholder(PasswordBox pb, TextBlock ph)
-    {
-        pb.PasswordChanged += (_, _) =>
-            ph.Visibility = string.IsNullOrEmpty(pb.Password) ? Visibility.Visible : Visibility.Collapsed;
-    }
+
 
     // ── Toggle visibilidad de contraseña (patrón PACRI) ──
     private void BtnTogglePassword_Click(object sender, RoutedEventArgs e)

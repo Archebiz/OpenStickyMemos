@@ -20,6 +20,9 @@ public partial class LoginViewModel : BaseViewModel
     private string _email = string.Empty;
 
     [ObservableProperty]
+    private string _displayName = string.Empty;
+
+    [ObservableProperty]
     private string _password = string.Empty;
 
     [ObservableProperty]
@@ -97,7 +100,7 @@ public partial class LoginViewModel : BaseViewModel
             if (IsLoginMode)
                 success = await _auth.LoginWithEmailAsync(Email.Trim(), Password);
             else
-                success = await _auth.RegisterWithEmailAsync(Email.Trim(), Password, null);
+                success = await _auth.RegisterWithEmailAsync(Email.Trim(), Password, DisplayName.Trim());
 
             if (success)
             {

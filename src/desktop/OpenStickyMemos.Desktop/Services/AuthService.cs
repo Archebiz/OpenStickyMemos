@@ -57,33 +57,46 @@ public class AuthService : IAuthService
 
     public async Task<bool> LoginWithGoogleAsync(string idToken)
     {
+        EnsureBaseAddress();
         return await ExchangeToken(idToken, "Google");
     }
 
     public async Task<bool> LoginWithMicrosoftAsync(string idToken)
     {
+        EnsureBaseAddress();
         return await ExchangeToken(idToken, "Microsoft");
+    }
+
+    /// <summary>Asegura que el HttpClient use la URL actual de settings</summary>
+    private void EnsureBaseAddress()
+    {
+        var currentUrl = _settings.Current.ApiUrl;
+        if (_http.BaseAddress?.OriginalString != currentUrl)
+            _http.BaseAddress = new Uri(currentUrl);
     }
 
     public async Task<bool> LoginWithEmailAsync(string email, string password)
     {
-        return await EmailAuthAsync("/auth/login", email, password);
+        EnsureBaseAddress();
+        return await EmailAuthAsync("/api/Auth/login", email, password);
     }
 
     public async Task<bool> RegisterWithEmailAsync(string email, string password, string? displayName)
     {
-        return await EmailAuthAsync("/auth/register", email, password, displayName);
+        EnsureBaseAddress();
+        return await EmailAuthAsync("/api/Auth/register", email, password, displayName);
     }
 
     public async Task<bool> RefreshTokenAsync()
     {
+        EnsureBaseAddress();
         var refreshToken = _credentials.GetRefreshToken();
         if (string.IsNullOrEmpty(refreshToken)) return false;
 
         try
         {
-            LogHttp($">> POST /auth/refresh");
-            var response = await _http.PostAsJsonAsync("/auth/refresh",
+            LogHttp($">> POST /api/Auth/refresh");
+            var response = await _http.PostAsJsonAsync("/api/Auth/refresh",
                 new { refreshToken });
             var respBody = await response.Content.ReadAsStringAsync();
             LogHttp($"<< {(int)response.StatusCode} {respBody}");
@@ -130,13 +143,22 @@ public class AuthService : IAuthService
                 : (object)new { email, password };
 
             var json = JsonSerializer.Serialize(body);
-            LogHttp($">> POST {endpoint} {json}");
+            var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}{endpoint}";
+            LogHttp($">> POST {fullUrl} {json}");
 
             var response = await _http.PostAsJsonAsync(endpoint, body);
             var respJson = await response.Content.ReadAsStringAsync();
             LogHttp($"<< {(int)response.StatusCode} {respJson}");
 
-            if (!response.IsSuccessStatusCode) return false;
+            if (!response.IsSuccessStatusCode)
+            {
+                System.Windows.MessageBox.Show(
+                    $"Respuesta del servidor:\n\nHTTP {(int)response.StatusCode}\n\n{respJson}",
+                    "DEBUG Auth",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+                return false;
+            }
 
             var auth = JsonSerializer.Deserialize<AuthResponse>(respJson);
             if (auth is null) return false;
@@ -144,8 +166,14 @@ public class AuthService : IAuthService
             ApplyAuth(auth);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            LogHttp($"!! ERROR: {ex.GetType().Name}: {ex.Message}");
+            System.Windows.MessageBox.Show(
+                $"Error de conexión con el servidor:\n\n{ex.GetType().Name}: {ex.Message}",
+                "Error de autenticación",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
             return false;
         }
     }
@@ -155,8 +183,8 @@ public class AuthService : IAuthService
         try
         {
             var endpoint = provider == "Google" ? "google" : "microsoft";
-            LogHttp($">> POST /auth/{endpoint}");
-            var response = await _http.PostAsJsonAsync($"/auth/{endpoint}",
+            LogHttp($">> POST /api/Auth/{endpoint}");
+            var response = await _http.PostAsJsonAsync($"/api/Auth/{endpoint}",
                 new { idToken, provider });
             var respBody = await response.Content.ReadAsStringAsync();
             LogHttp($"<< {(int)response.StatusCode} {respBody}");

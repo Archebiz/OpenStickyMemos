@@ -41,9 +41,14 @@ public partial class MainWindow : Window
             log += $"  -> View creada: {view.GetType().Name}\n";
 
             var vmTypeName = viewType.FullName!
-                .Replace("Views.", "ViewModels.")
-                .Replace("View", "ViewModel");
-            var vmType = Type.GetType(vmTypeName);
+                .Replace(".Views.", ".ViewModels.");
+            // Quitar solo el sufijo "View" y agregar "ViewModel"
+            // (NO usar Replace("View","ViewModel") porque corrompe "ViewModels")
+            if (vmTypeName.EndsWith("View"))
+                vmTypeName = vmTypeName[..^4] + "ViewModel";
+            else
+                vmTypeName += "ViewModel";
+            var vmType = viewType.Assembly.GetType(vmTypeName);
             if (vmType is not null)
             {
                 view.DataContext = App.Services.GetRequiredService(vmType);
