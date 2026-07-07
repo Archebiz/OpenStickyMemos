@@ -50,43 +50,52 @@ public partial class StickyBoardView : UserControl
 
     private void AddNoteToCanvas(NoteItem note)
     {
-        var ctrl = CreateNoteControl(note);
-        Canvas.SetLeft(ctrl, note.PositionX);
-        Canvas.SetTop(ctrl, note.PositionY);
-        Panel.SetZIndex(ctrl, note.ZIndex);
-        NotesCanvas.Children.Add(ctrl);
+        Dispatcher.Invoke(() =>
+        {
+            var ctrl = CreateNoteControl(note);
+            Canvas.SetLeft(ctrl, note.PositionX);
+            Canvas.SetTop(ctrl, note.PositionY);
+            Panel.SetZIndex(ctrl, note.ZIndex);
+            NotesCanvas.Children.Add(ctrl);
+        });
     }
 
     private void UpdateNoteOnCanvas(NoteItem note)
     {
-        foreach (var child in NotesCanvas.Children)
+        Dispatcher.Invoke(() =>
         {
-            if (child is NoteControl nc && nc.NoteId == note.Id)
+            foreach (var child in NotesCanvas.Children)
             {
-                nc.Title = note.Title ?? string.Empty;
-                nc.NoteContent = note.Content ?? string.Empty;
-                nc.NoteColor = note.Color;
-                nc.IsPinned = note.IsPinned;
-                Canvas.SetLeft(nc, note.PositionX);
-                Canvas.SetTop(nc, note.PositionY);
-                Panel.SetZIndex(nc, note.ZIndex);
-                nc.Width = note.Width;
-                nc.Height = note.Height;
-                break;
+                if (child is NoteControl nc && nc.NoteId == note.Id)
+                {
+                    nc.Title = note.Title ?? string.Empty;
+                    nc.NoteContent = note.Content ?? string.Empty;
+                    nc.NoteColor = note.Color;
+                    nc.IsPinned = note.IsPinned;
+                    Canvas.SetLeft(nc, note.PositionX);
+                    Canvas.SetTop(nc, note.PositionY);
+                    Panel.SetZIndex(nc, note.ZIndex);
+                    nc.Width = note.Width;
+                    nc.Height = note.Height;
+                    break;
+                }
             }
-        }
+        });
     }
 
     private void RemoveNoteFromCanvas(string noteId)
     {
-        foreach (var child in NotesCanvas.Children)
+        Dispatcher.Invoke(() =>
         {
-            if (child is NoteControl nc && nc.NoteId == noteId)
+            foreach (var child in NotesCanvas.Children)
             {
-                NotesCanvas.Children.Remove(nc);
-                break;
+                if (child is NoteControl nc && nc.NoteId == noteId)
+                {
+                    NotesCanvas.Children.Remove(nc);
+                    break;
+                }
             }
-        }
+        });
     }
 
     private NoteControl CreateNoteControl(NoteItem note)
