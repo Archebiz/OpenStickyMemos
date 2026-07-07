@@ -34,38 +34,86 @@ public class SettingsService : ISettingsService
 {
     public AppSettings Current { get; }
 
+    // Ruta del archivo bundled (se sobreescribe con cada build/publish)
+    private static readonly string BundledPath =
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+
+    // Ruta del archivo de usuario (persiste entre builds, en AppData)
+    private static readonly string UserSettingsPath =
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OpenStickyMemos",
+            "settings.json");
+
     public SettingsService()
     {
-        var basePath = AppDomain.CurrentDomain.BaseDirectory;
-        var filePath = Path.Combine(basePath, "appsettings.json");
-
-        if (File.Exists(filePath))
+        // 1. Cargar defaults desde el archivo bundled (junto al .exe)
+        AppSettings defaults;
+        if (File.Exists(BundledPath))
         {
-            var json = File.ReadAllText(filePath);
-            Current = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+            var json = File.ReadAllText(BundledPath);
+            defaults = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
         }
         else
         {
-            Current = new AppSettings();
+            defaults = new AppSettings();
         }
 
-        // Override with environment variables (for Railway)
+        // 2. Sobrescribir con configuración persistente del usuario (si existe)
+        var userDir = Path.GetDirectoryName(UserSettingsPath)!;
+        if (!Directory.Exists(userDir))
+            Directory.CreateDirectory(userDir);
+
+        if (File.Exists(UserSettingsPath))
+        {
+            try
+            {
+                var userJson = File.ReadAllText(UserSettingsPath);
+                var userSettings = JsonSerializer.Deserialize<AppSettings>(userJson);
+                if (userSettings is not null)
+                {
+                    if (!string.IsNullOrEmpty(userSettings.ApiUrl))
+                        defaults.ApiUrl = userSettings.ApiUrl;
+                    if (!string.IsNullOrEmpty(userSettings.SignalRUrl))
+                        defaults.SignalRUrl = userSettings.SignalRUrl;
+                    if (userSettings.OAuth is not null)
+                    {
+                        if (!string.IsNullOrEmpty(userSettings.OAuth.Google.ClientId))
+                            defaults.OAuth.Google.ClientId = userSettings.OAuth.Google.ClientId;
+                        if (!string.IsNullOrEmpty(userSettings.OAuth.Microsoft.ClientId))
+                            defaults.OAuth.Microsoft.ClientId = userSettings.OAuth.Microsoft.ClientId;
+                    }
+                }
+            }
+            catch { /* ignorar errores de lectura */ }
+        }
+
+        // 3. Override con variables de entorno (para Railway)
         var envApiUrl = Environment.GetEnvironmentVariable("API_URL");
         if (!string.IsNullOrEmpty(envApiUrl))
-            Current.ApiUrl = envApiUrl;
+            defaults.ApiUrl = envApiUrl;
 
         var envSignalR = Environment.GetEnvironmentVariable("SIGNALR_URL");
         if (!string.IsNullOrEmpty(envSignalR))
-            Current.SignalRUrl = envSignalR;
+            defaults.SignalRUrl = envSignalR;
+
+        Current = defaults;
     }
 
     public void Save(AppSettings settings)
     {
-        var basePath = AppDomain.CurrentDomain.BaseDirectory;
-        var filePath = Path.Combine(basePath, "appsettings.json");
-        var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(filePath, json);
-        // Actualizar Current in-place (no reemplazar referencia)
+        // Guardar SOLO en AppData, no tocamos el bundled
+        var userDir = Path.GetDirectoryName(UserSettingsPath)!;
+        if (!Directory.Exists(userDir))
+            Directory.CreateDirectory(userDir);
+
+        var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+        File.WriteAllText(UserSettingsPath, json);
+
+        // Actualizar Current in-place
         Current.ApiUrl = settings.ApiUrl;
         Current.SignalRUrl = settings.SignalRUrl;
         Current.OAuth = settings.OAuth;

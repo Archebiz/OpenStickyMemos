@@ -70,6 +70,7 @@ public partial class MainWindow : Window
                 Width = 400; Height = 640;
                 ResizeMode = ResizeMode.NoResize;
                 WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                AppWindowChrome.CaptionHeight = 30; // Área de caption para arrastrar ventana
             }
             else
             {
@@ -77,6 +78,7 @@ public partial class MainWindow : Window
                 MinWidth = 800; MinHeight = 500;
                 Width = 1100; Height = 700;
                 ResizeMode = ResizeMode.CanResize;
+                AppWindowChrome.CaptionHeight = 0; // Evita que el caption intercepte clics en botones
             }
         }
         catch (Exception ex)

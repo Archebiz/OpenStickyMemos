@@ -11,6 +11,7 @@ public partial class LoginViewModel : BaseViewModel
     private readonly INavigationService _navigation;
     private readonly ISettingsService _settings;
     private readonly ISignalRService _signalR;
+    private readonly ICredentialService _credentials;
 
     // ── Credenciales de administrador offline ──
     private const string ADMIN_USUARIO = "ADMINISTRADOR";
@@ -46,16 +47,27 @@ public partial class LoginViewModel : BaseViewModel
     private bool _showWebView;
 
     public LoginViewModel(IAuthService auth, INavigationService navigation,
-        ISettingsService settings, ISignalRService signalR)
+        ISettingsService settings, ISignalRService signalR,
+        ICredentialService credentials)
     {
         _auth = auth;
         _navigation = navigation;
         _settings = settings;
         _signalR = signalR;
+        _credentials = credentials;
 
         // Versión desde el ensamblado
         var ver = Assembly.GetExecutingAssembly().GetName().Version;
         VersionText = ver is not null ? $"v{ver.Major}.{ver.Minor}.{ver.Build}" : "v1.0.0";
+
+        // Restaurar "Recordar contraseña" si hay credenciales guardadas
+        var rememberedEmail = _credentials.GetRememberedEmail();
+        if (rememberedEmail is not null)
+        {
+            Email = rememberedEmail;
+            Password = _credentials.GetRememberedPassword() ?? string.Empty;
+            RememberPassword = true;
+        }
     }
 
     [RelayCommand]
@@ -104,6 +116,12 @@ public partial class LoginViewModel : BaseViewModel
 
             if (success)
             {
+                // Guardar contraseña si "Recordar contraseña" está activo
+                if (RememberPassword)
+                    _credentials.SavePassword(Email.Trim(), Password);
+                else
+                    _credentials.ClearPassword();
+
                 await _signalR.StartAsync();
                 _navigation.NavigateTo<Views.DashboardView>();
             }

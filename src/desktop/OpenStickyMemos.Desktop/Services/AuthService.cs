@@ -6,15 +6,22 @@ using System.Threading.Tasks;
 
 namespace OpenStickyMemos.Desktop.Services;
 
-public record AuthResponse(
-    string AccessToken, string RefreshToken,
-    DateTime ExpiresAt, UserInfo User
-);
+public class AuthResponse
+{
+    public string AccessToken { get; set; } = string.Empty;
+    public string RefreshToken { get; set; } = string.Empty;
+    public DateTime ExpiresAt { get; set; }
+    public UserInfo User { get; set; } = null!;
+}
 
-public record UserInfo(
-    string Id, string Email, string DisplayName,
-    string? AvatarUrl, string AuthProvider
-);
+public class UserInfo
+{
+    public string Id { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
+    public string AuthProvider { get; set; } = string.Empty;
+}
 
 public interface IAuthService
 {
@@ -41,6 +48,11 @@ public class AuthService : IAuthService
     public UserInfo? CurrentUser { get; private set; }
     public bool IsLoggedIn => !string.IsNullOrEmpty(AccessToken);
     public event Action? AuthChanged;
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     public AuthService(ISettingsService settings, ICredentialService credentials)
     {
@@ -103,7 +115,7 @@ public class AuthService : IAuthService
 
             if (!response.IsSuccessStatusCode) return false;
 
-            var auth = System.Text.Json.JsonSerializer.Deserialize<AuthResponse>(respBody);
+            var auth = JsonSerializer.Deserialize<AuthResponse>(respBody, JsonOptions);
             if (auth is null) return false;
 
             ApplyAuth(auth);
@@ -160,7 +172,7 @@ public class AuthService : IAuthService
                 return false;
             }
 
-            var auth = JsonSerializer.Deserialize<AuthResponse>(respJson);
+            var auth = JsonSerializer.Deserialize<AuthResponse>(respJson, JsonOptions);
             if (auth is null) return false;
 
             ApplyAuth(auth);
@@ -191,7 +203,7 @@ public class AuthService : IAuthService
 
             if (!response.IsSuccessStatusCode) return false;
 
-            var auth = System.Text.Json.JsonSerializer.Deserialize<AuthResponse>(respBody);
+            var auth = JsonSerializer.Deserialize<AuthResponse>(respBody, JsonOptions);
             if (auth is null) return false;
 
             ApplyAuth(auth);
@@ -209,6 +221,11 @@ public class AuthService : IAuthService
         CurrentUser = auth.User;
         _credentials.Save(auth.AccessToken, auth.RefreshToken,
             JsonSerializer.Serialize(auth.User));
+
+        LogHttp($"ApplyAuth: AccessToken={(AccessToken is not null ? $"{AccessToken[..Math.Min(AccessToken.Length, 30)]}..." : "NULL")}, " +
+            $"RefreshToken={(auth.RefreshToken is not null ? $"{auth.RefreshToken[..Math.Min(auth.RefreshToken.Length, 10)]}..." : "NULL")}, " +
+            $"User={auth.User?.Email ?? "NULL"}");
+
         AuthChanged?.Invoke();
     }
 }

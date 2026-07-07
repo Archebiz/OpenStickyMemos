@@ -12,6 +12,12 @@ public interface ICredentialService
     string? GetRefreshToken();
     string? GetUserJson();
     void Clear();
+
+    // Persistencia de "Recordar contraseña"
+    void SavePassword(string email, string password);
+    string? GetRememberedEmail();
+    string? GetRememberedPassword();
+    void ClearPassword();
 }
 
 public class CredentialService : ICredentialService
@@ -62,6 +68,64 @@ public class CredentialService : ICredentialService
         if (File.Exists(_dbPath))
             File.Delete(_dbPath);
     }
+
+    // ── "Recordar contraseña" ──
+
+    private static readonly string PasswordPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "OpenStickyMemos",
+        "password.dat");
+
+    private static readonly byte[] PasswordEntropy = Encoding.UTF8.GetBytes("OpenStickyMemos_pwd_v1");
+
+    public void SavePassword(string email, string password)
+    {
+        var data = $"{email}|{password}";
+        var encrypted = ProtectedData.Protect(
+            Encoding.UTF8.GetBytes(data),
+            PasswordEntropy,
+            DataProtectionScope.CurrentUser);
+        var dir = Path.GetDirectoryName(PasswordPath)!;
+        if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+        File.WriteAllBytes(PasswordPath, encrypted);
+    }
+
+    public string? GetRememberedEmail()
+    {
+        var parts = DecryptPassword();
+        return parts?.Length > 0 ? parts[0] : null;
+    }
+
+    public string? GetRememberedPassword()
+    {
+        var parts = DecryptPassword();
+        return parts?.Length > 1 ? parts[1] : null;
+    }
+
+    public void ClearPassword()
+    {
+        if (File.Exists(PasswordPath))
+            File.Delete(PasswordPath);
+    }
+
+    private string[]? DecryptPassword()
+    {
+        if (!File.Exists(PasswordPath)) return null;
+        try
+        {
+            var encrypted = File.ReadAllBytes(PasswordPath);
+            var decrypted = ProtectedData.Unprotect(
+                encrypted, PasswordEntropy, DataProtectionScope.CurrentUser);
+            var data = Encoding.UTF8.GetString(decrypted);
+            return data.Split('|', 2);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    // ── Token credentials ──
 
     private string[]? Decrypt()
     {

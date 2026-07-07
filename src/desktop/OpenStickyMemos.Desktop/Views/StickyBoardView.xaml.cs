@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using OpenStickyMemos.Desktop.Services;
+using OpenStickyMemos.Desktop.ViewModels;
 
 namespace OpenStickyMemos.Desktop.Views;
 

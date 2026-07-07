@@ -2,7 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using OpenStickyMemos.Desktop.Services;
 using OpenStickyMemos.Desktop.ViewModels;
 
-namespace OpenStickyMemos.Desktop.Views;
+namespace OpenStickyMemos.Desktop.ViewModels;
 
 /// <summary>
 /// Representa una nota en el board (modelo ligero para la UI)
@@ -63,13 +63,19 @@ public class StickyBoardViewModel : BaseViewModel
 
         try
         {
-            // Obtener projectId de la navegación
-            // En una app real, pasaríamos el projectId como parámetro
-            // Por ahora usamos el primer proyecto disponible
-            var projects = await _api.GetProjectsAsync();
-            if (projects.Count == 0) return;
-
-            _projectId = projects[0].Id;
+            // Obtener projectId del parámetro de navegación
+            var projectIdParam = _navigation.NavigationParameter as string;
+            if (!string.IsNullOrEmpty(projectIdParam))
+            {
+                _projectId = projectIdParam;
+            }
+            else
+            {
+                // Fallback: primer proyecto disponible
+                var projects = await _api.GetProjectsAsync();
+                if (projects.Count == 0) return;
+                _projectId = projects[0].Id;
+            }
 
             // Cargar notas
             var notes = await _api.GetNotesAsync(_projectId);

@@ -96,6 +96,7 @@ public partial class DashboardViewModel : BaseViewModel
     [RelayCommand]
     private void OpenProject(string projectId)
     {
+        _navigation.NavigationParameter = projectId;
         _navigation.NavigateTo<StickyBoardView>();
     }
 

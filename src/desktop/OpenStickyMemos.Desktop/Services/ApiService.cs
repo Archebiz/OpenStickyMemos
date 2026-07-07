@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -6,28 +7,50 @@ using System.Threading.Tasks;
 
 namespace OpenStickyMemos.Desktop.Services;
 
-public record ProjectResponse(
-    string Id, string Name, string? Description,
-    string OwnerId, string OwnerName, string? OwnerAvatar,
-    DateTime CreatedAt, DateTime UpdatedAt,
-    int MemberCount, int NoteCount,
-    List<MemberInfo> Members
-);
+public class ProjectResponse
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string OwnerId { get; set; } = string.Empty;
+    public string OwnerName { get; set; } = string.Empty;
+    public string? OwnerAvatar { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public int MemberCount { get; set; }
+    public int NoteCount { get; set; }
+    public List<MemberInfo> Members { get; set; } = new();
+}
 
-public record MemberInfo(
-    string Id, string UserId, string Email,
-    string DisplayName, string? AvatarUrl, string Role,
-    DateTime JoinedAt
-);
+public class MemberInfo
+{
+    public string Id { get; set; } = string.Empty;
+    public string UserId { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
+    public string Role { get; set; } = string.Empty;
+    public DateTime JoinedAt { get; set; }
+}
 
-public record NoteResponse(
-    string Id, string ProjectId,
-    string AuthorId, string AuthorName, string? AuthorAvatar,
-    string? Title, string? Content, string Color,
-    double PositionX, double PositionY,
-    double Width, double Height, bool IsPinned,
-    DateTime CreatedAt, DateTime UpdatedAt
-);
+public class NoteResponse
+{
+    public string Id { get; set; } = string.Empty;
+    public string ProjectId { get; set; } = string.Empty;
+    public string AuthorId { get; set; } = string.Empty;
+    public string AuthorName { get; set; } = string.Empty;
+    public string? AuthorAvatar { get; set; }
+    public string? Title { get; set; }
+    public string? Content { get; set; }
+    public string Color { get; set; } = "#FFE066";
+    public double PositionX { get; set; }
+    public double PositionY { get; set; }
+    public double Width { get; set; }
+    public double Height { get; set; }
+    public bool IsPinned { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
 
 public interface IApiService
 {
@@ -48,112 +71,217 @@ public class ApiService : IApiService
 {
     private readonly HttpClient _http;
     private readonly ISettingsService _settings;
+    private readonly IAuthService _auth;
 
-    public ApiService(ISettingsService settings)
+    private static readonly string LogPath = Desktop.App.LogPath;
+
+    public ApiService(ISettingsService settings, IAuthService auth)
     {
         _settings = settings;
+        _auth = auth;
         _http = new HttpClient { BaseAddress = new Uri(settings.Current.ApiUrl) };
+
+        // Auto-aplicar token si ya hay sesión activa
+        ApplyToken();
+
+        // Mantener token sincronizado cuando cambie (login, refresh, logout)
+        _auth.AuthChanged += ApplyToken;
+
+        Log($"ApiService iniciado. BaseAddress: {settings.Current.ApiUrl}, IsLoggedIn: {auth.IsLoggedIn}");
+    }
+
+    /// <summary>Configura el header Authorization desde IAuthService automáticamente</summary>
+    private void ApplyToken()
+    {
+        var token = _auth.AccessToken;
+        Log($"ApplyToken: _auth.AccessToken = {(token is not null ? $"{token[..Math.Min(token.Length, 30)]}... (len={token.Length})" : "NULL")}");
+        Log($"ApplyToken: _auth.IsLoggedIn = {_auth.IsLoggedIn}");
+
+        if (!string.IsNullOrEmpty(token))
+        {
+            _http.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", token);
+            Log($"Token JWT configurado correctamente");
+        }
+        else
+        {
+            _http.DefaultRequestHeaders.Authorization = null;
+            Log("Token JWT removido (sin token disponible)");
+        }
     }
 
     public void SetToken(string token)
     {
         _http.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
+        Log($"Token JWT configurado manualmente: {token[..Math.Min(token.Length, 20)]}...");
     }
+
+    // ── Logging ──
+
+    private static void Log(string msg)
+    {
+        try { File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss}] [ApiService] {msg}\n"); } catch { }
+    }
+
+    private static void LogError(string context, Exception ex)
+    {
+        try { File.AppendAllText(LogPath, $"[{DateTime.Now:HH:mm:ss}] [ApiService] [ERROR] {context}: {ex.GetType().Name}: {ex.Message}\n"); } catch { }
+    }
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    private async Task<T?> GetAsync<T>(string url) where T : class
+    {
+        var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}{url}";
+        Log($"GET {fullUrl}");
+        try
+        {
+            var response = await _http.GetAsync(url);
+            var body = await response.Content.ReadAsStringAsync();
+            Log($"GET {fullUrl} → {(int)response.StatusCode} {body[..Math.Min(body.Length, 500)]}");
+            if (!response.IsSuccessStatusCode) return null;
+            return JsonSerializer.Deserialize<T>(body, JsonOptions);
+        }
+        catch (Exception ex)
+        {
+            LogError($"GET {fullUrl}", ex);
+            return null;
+        }
+    }
+
+    private async Task<T?> PostAsync<T>(string url, object body) where T : class
+    {
+        var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}{url}";
+        var json = JsonSerializer.Serialize(body);
+        Log($"POST {fullUrl} {json}");
+        try
+        {
+            var response = await _http.PostAsJsonAsync(url, body);
+            var respBody = await response.Content.ReadAsStringAsync();
+            Log($"POST {fullUrl} → {(int)response.StatusCode} {respBody[..Math.Min(respBody.Length, 500)]}");
+            if (!response.IsSuccessStatusCode) return null;
+            return JsonSerializer.Deserialize<T>(respBody, JsonOptions);
+        }
+        catch (Exception ex)
+        {
+            LogError($"POST {fullUrl}", ex);
+            return null;
+        }
+    }
+
+    private async Task<bool> DeleteAsync(string url)
+    {
+        var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}{url}";
+        Log($"DELETE {fullUrl}");
+        try
+        {
+            var response = await _http.DeleteAsync(url);
+            Log($"DELETE {fullUrl} → {(int)response.StatusCode}");
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            LogError($"DELETE {fullUrl}", ex);
+            return false;
+        }
+    }
+
+    // ── Projects ──
 
     public async Task<List<ProjectResponse>> GetProjectsAsync()
     {
-        return await _http.GetFromJsonAsync<List<ProjectResponse>>("/projects")
+        return await GetAsync<List<ProjectResponse>>("/api/Projects")
                ?? new List<ProjectResponse>();
     }
 
     public async Task<ProjectResponse?> GetProjectAsync(string id)
     {
-        try { return await _http.GetFromJsonAsync<ProjectResponse>($"/projects/{id}"); }
-        catch { return null; }
+        return await GetAsync<ProjectResponse>($"/api/Projects/{id}");
     }
 
     public async Task<ProjectResponse> CreateProjectAsync(string name, string? description)
     {
-        var response = await _http.PostAsJsonAsync("/projects",
+        var result = await PostAsync<ProjectResponse>("/api/Projects",
             new { name, description });
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<ProjectResponse>())!;
+        return result!;
     }
 
     public async Task<ProjectResponse?> UpdateProjectAsync(string id, string name, string? description)
     {
+        var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}/api/Projects/{id}";
+        var json = JsonSerializer.Serialize(new { name, description });
+        Log($"PUT {fullUrl} {json}");
         try
         {
-            var response = await _http.PutAsJsonAsync($"/projects/{id}",
+            var response = await _http.PutAsJsonAsync($"/api/Projects/{id}",
                 new { name, description });
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<ProjectResponse>();
+            var respBody = await response.Content.ReadAsStringAsync();
+            Log($"PUT {fullUrl} → {(int)response.StatusCode} {respBody[..Math.Min(respBody.Length, 500)]}");
+            if (!response.IsSuccessStatusCode) return null;
+            return JsonSerializer.Deserialize<ProjectResponse>(respBody, JsonOptions);
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            LogError($"PUT {fullUrl}", ex);
+            return null;
+        }
     }
 
     public async Task<bool> DeleteProjectAsync(string id)
     {
-        try
-        {
-            var response = await _http.DeleteAsync($"/projects/{id}");
-            return response.IsSuccessStatusCode;
-        }
-        catch { return false; }
+        return await DeleteAsync($"/api/Projects/{id}");
     }
+
+    // ── Members ──
 
     public async Task<MemberInfo?> AddMemberAsync(string projectId, string email)
     {
-        try
-        {
-            var response = await _http.PostAsJsonAsync(
-                $"/projects/{projectId}/members", new { email });
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<MemberInfo>();
-        }
-        catch { return null; }
+        return await PostAsync<MemberInfo>(
+            $"/api/Projects/{projectId}/members", new { email });
     }
+
+    // ── Notes ──
 
     public async Task<List<NoteResponse>> GetNotesAsync(string projectId)
     {
-        return await _http.GetFromJsonAsync<List<NoteResponse>>(
-                   $"/projects/{projectId}/notes")
+        return await GetAsync<List<NoteResponse>>(
+                   $"/api/Projects/{projectId}/notes")
                ?? new List<NoteResponse>();
     }
 
     public async Task<NoteResponse?> CreateNoteAsync(string projectId, object request)
     {
-        try
-        {
-            var response = await _http.PostAsJsonAsync(
-                $"/projects/{projectId}/notes", request);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<NoteResponse>();
-        }
-        catch { return null; }
+        return await PostAsync<NoteResponse>(
+            $"/api/Projects/{projectId}/notes", request);
     }
 
     public async Task<NoteResponse?> UpdateNoteAsync(string projectId, string noteId, object request)
     {
+        var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}/api/Projects/{projectId}/notes/{noteId}";
+        var json = JsonSerializer.Serialize(request);
+        Log($"PUT {fullUrl} {json}");
         try
         {
             var response = await _http.PutAsJsonAsync(
-                $"/projects/{projectId}/notes/{noteId}", request);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<NoteResponse>();
+                $"/api/Projects/{projectId}/notes/{noteId}", request);
+            var respBody = await response.Content.ReadAsStringAsync();
+            Log($"PUT {fullUrl} → {(int)response.StatusCode} {respBody[..Math.Min(respBody.Length, 500)]}");
+            if (!response.IsSuccessStatusCode) return null;
+            return JsonSerializer.Deserialize<NoteResponse>(respBody, JsonOptions);
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            LogError($"PUT {fullUrl}", ex);
+            return null;
+        }
     }
 
     public async Task<bool> DeleteNoteAsync(string projectId, string noteId)
     {
-        try
-        {
-            var response = await _http.DeleteAsync(
-                $"/projects/{projectId}/notes/{noteId}");
-            return response.IsSuccessStatusCode;
-        }
-        catch { return false; }
+        return await DeleteAsync($"/api/Projects/{projectId}/notes/{noteId}");
     }
 }

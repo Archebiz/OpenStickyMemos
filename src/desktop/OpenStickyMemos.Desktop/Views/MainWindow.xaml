@@ -13,7 +13,7 @@
         d:DataContext="{d:DesignInstance vm:MainViewModel}">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="30" GlassFrameThickness="0"
+        <WindowChrome x:Name="AppWindowChrome" CaptionHeight="30" GlassFrameThickness="0"
                       ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
 

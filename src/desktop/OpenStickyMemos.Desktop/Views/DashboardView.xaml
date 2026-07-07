@@ -5,7 +5,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:OpenStickyMemos.Desktop.ViewModels"
              mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance vm:DashboardViewModel}">
+             d:DataContext="{d:DesignInstance vm:DashboardViewModel}"
+             Loaded="OnLoaded">
     <Grid Background="#F0F2F5">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

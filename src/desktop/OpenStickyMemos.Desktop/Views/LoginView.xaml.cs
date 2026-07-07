@@ -123,6 +123,13 @@ public partial class LoginView : UserControl
         };
 
         _vm.CloseWebView += () => ShowWebView(false);
+
+        // Restaurar contraseña recordada en el PasswordBox
+        if (_vm.RememberPassword && !string.IsNullOrEmpty(_vm.Password))
+        {
+            PasswordBox.Password = _vm.Password;
+            PlaceholderPassword.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
