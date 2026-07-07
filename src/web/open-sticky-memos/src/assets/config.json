@@ -1,4 +1,1 @@
-{
-  "apiUrl": "http://localhost:5000",
-  "signalrUrl": "http://localhost:5000/hubs/notes"
-}
+{"apiUrl":"http://localhost:5000","signalrUrl":"http://localhost:5000/hubs/notes"}

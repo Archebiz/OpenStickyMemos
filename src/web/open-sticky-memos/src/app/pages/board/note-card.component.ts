@@ -38,6 +38,7 @@ export interface NoteCardData {
       [style.background-color]="note.color"
       [style.z-index]="note.zIndex"
       [class.editing]="isEditing"
+      [class.pinned]="note.isPinned"
       (mousedown)="onMouseDown($event)"
       (dblclick)="startEdit()"
     >
@@ -128,6 +129,13 @@ export interface NoteCardData {
       }
       .note-card:active {
         cursor: grabbing;
+      }
+      .note-card.pinned {
+        cursor: default;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(102, 126, 234, 0.3);
+      }
+      .note-card.pinned:active {
+        cursor: default;
       }
       .note-card.editing {
         cursor: default;
@@ -363,7 +371,7 @@ export class NoteCardComponent implements AfterViewInit {
   }
 
   onMouseDown(event: MouseEvent): void {
-    if (this.isEditing) return;
+    if (this.isEditing || this.note.isPinned) return;
     this.dragStart.emit({
       noteId: this.note.id,
       mouseX: event.clientX,
@@ -372,6 +380,7 @@ export class NoteCardComponent implements AfterViewInit {
   }
 
   onResizeStart(event: MouseEvent): void {
+    if (this.note.isPinned) return;
     event.stopPropagation();
     this.resizeStart.emit({
       noteId: this.note.id,
