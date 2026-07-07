@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -106,6 +107,9 @@ public partial class StickyBoardView : UserControl
         ctrl.DeleteClicked += OnNoteDeleteClicked;
         ctrl.PinToggled += OnNotePinToggled;
         ctrl.ColorClicked += OnNoteColorClicked;
+        ctrl.BringToFrontClicked += OnBringToFront;
+        ctrl.SendToBackClicked += OnSendToBack;
+        ctrl.ResizeCompleted += OnResizeCompleted;
 
         // Mouse move/up on canvas handles dragging
         return ctrl;
@@ -196,6 +200,26 @@ public partial class StickyBoardView : UserControl
     }
 
     private string? _pendingColorNoteId;
+
+    private void OnBringToFront(string noteId)
+    {
+        _maxZIndex++;
+        var ctrl = NotesCanvas.Children.OfType<NoteControl>().FirstOrDefault(c => c.NoteId == noteId);
+        if (ctrl is not null) Panel.SetZIndex(ctrl, _maxZIndex);
+        _vm.UpdateNoteZIndex(noteId, _maxZIndex);
+    }
+
+    private void OnSendToBack(string noteId)
+    {
+        var ctrl = NotesCanvas.Children.OfType<NoteControl>().FirstOrDefault(c => c.NoteId == noteId);
+        if (ctrl is not null) Panel.SetZIndex(ctrl, 0);
+        _vm.UpdateNoteZIndex(noteId, 0);
+    }
+
+    private void OnResizeCompleted(string noteId, double width, double height)
+    {
+        _vm.UpdateNoteSize(noteId, width, height);
+    }
 
     private void ColorPicker_Click(object sender, RoutedEventArgs e)
     {

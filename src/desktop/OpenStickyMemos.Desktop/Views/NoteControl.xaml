@@ -19,9 +19,17 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Toolbar: pin + color + delete -->
+            <!-- Toolbar: z-order + pin + color + delete -->
             <StackPanel Grid.Row="0" Orientation="Horizontal"
                         HorizontalAlignment="Right" Margin="0 0 0 4">
+                <Button x:Name="BringFrontButton" Content="⬆" FontSize="10"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="#888" Cursor="Hand" Padding="2 0"
+                        ToolTip="Traer al frente" Click="BringFrontButton_Click"/>
+                <Button x:Name="SendBackButton" Content="⬇" FontSize="10"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="#888" Cursor="Hand" Padding="2 0"
+                        ToolTip="Enviar al fondo" Click="SendBackButton_Click"/>
                 <Button x:Name="PinButton" Content="📌" FontSize="12"
                         Background="Transparent" BorderThickness="0"
                         Foreground="#888" Cursor="Hand" Padding="2"

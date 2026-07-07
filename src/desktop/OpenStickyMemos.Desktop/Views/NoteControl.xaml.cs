@@ -65,6 +65,9 @@ public partial class NoteControl : UserControl
     public event Action<string, string, string>? ContentChanged; // noteId, title, content
     public event Action<string, bool>? PinToggled; // noteId, isPinned
     public event Action<string>? ColorClicked; // noteId
+    public event Action<string>? BringToFrontClicked; // noteId
+    public event Action<string>? SendToBackClicked; // noteId
+    public event Action<string, double, double>? ResizeCompleted; // noteId, width, height
 
     public NoteControl()
     {
@@ -178,19 +181,39 @@ public partial class NoteControl : UserControl
 
     private void TitleBox_LostFocus(object sender, RoutedEventArgs e)
     {
-        // Save on focus loss
-        if (_isEditing) SaveButton_Click(sender, e);
+        // Don't exit edit mode - just save silently
+        if (_isEditing)
+        {
+            Title = TitleBox.Text;
+            NoteContent = ContentBox.Text;
+            SyncViewMode();
+        }
     }
 
     private void ContentBox_LostFocus(object sender, RoutedEventArgs e)
     {
-        // Save on focus loss
-        if (_isEditing) SaveButton_Click(sender, e);
+        // Don't exit edit mode - just save silently
+        if (_isEditing)
+        {
+            Title = TitleBox.Text;
+            NoteContent = ContentBox.Text;
+            SyncViewMode();
+        }
     }
 
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
         EndEdit(save: true);
+    }
+
+    private void BringFrontButton_Click(object sender, RoutedEventArgs e)
+    {
+        BringToFrontClicked?.Invoke(NoteId);
+    }
+
+    private void SendBackButton_Click(object sender, RoutedEventArgs e)
+    {
+        SendToBackClicked?.Invoke(NoteId);
     }
 
     private void ResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
@@ -199,6 +222,8 @@ public partial class NoteControl : UserControl
         var newHeight = Math.Max(80, ActualHeight + e.VerticalChange);
         Width = newWidth;
         Height = newHeight;
+        // Fire resize event for API persistence
+        ResizeCompleted?.Invoke(NoteId, newWidth, newHeight);
     }
 
     // ── Double-click to edit ──
@@ -220,7 +245,7 @@ public partial class NoteControl : UserControl
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonDown(e);
-        if (e.OriginalSource is not Thumb && e.ClickCount == 1)
+        if (e.OriginalSource is not Thumb && e.ClickCount == 1 && !IsPinned)
             NoteMouseDown?.Invoke(this, e);
     }
 }

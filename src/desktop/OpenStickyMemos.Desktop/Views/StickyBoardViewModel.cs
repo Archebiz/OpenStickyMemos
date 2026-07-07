@@ -142,6 +142,14 @@ public class StickyBoardViewModel : BaseViewModel
         _ = _api.UpdateNoteAsync(_projectId, noteId, new { zIndex });
     }
 
+    public void UpdateNoteSize(string noteId, double width, double height)
+    {
+        if (!_notes.TryGetValue(noteId, out var note)) return;
+        note.Width = width;
+        note.Height = height;
+        _ = _api.UpdateNoteAsync(_projectId, noteId, new { width, height });
+    }
+
     public void UpdateNotePin(string noteId, bool isPinned)
     {
         if (!_notes.TryGetValue(noteId, out var note)) return;
