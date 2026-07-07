@@ -19,6 +19,7 @@ export interface NoteEvent {
   width: number;
   height: number;
   isPinned: boolean;
+  zIndex: number;
   createdAt: string;
   updatedAt: string;
 }
