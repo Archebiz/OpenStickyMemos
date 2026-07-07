@@ -30,14 +30,16 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        var normalizedEmail = request.Email.ToLowerInvariant();
+
+        var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
         if (existingUser is not null)
             return Conflict(new { error = "El email ya está registrado" });
 
         var user = new User
         {
-            Email = request.Email,
-            DisplayName = request.DisplayName ?? request.Email.Split('@')[0],
+            Email = normalizedEmail,
+            DisplayName = request.DisplayName ?? normalizedEmail.Split('@')[0],
             AuthProvider = "Email",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
         };
@@ -54,7 +56,8 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        var normalizedEmail = request.Email.ToLowerInvariant();
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
         if (user is null)
             return Unauthorized(new { error = "Email o contraseña incorrectos" });
 
@@ -158,6 +161,8 @@ public class AuthController : ControllerBase
         string provider, string providerId, string email,
         string displayName, string? avatarUrl)
     {
+        var normalizedEmail = email.ToLowerInvariant();
+
         // Buscar por provider + providerId
         var user = await _db.Users
             .FirstOrDefaultAsync(u => u.AuthProvider == provider && u.ProviderId == providerId);
@@ -166,14 +171,14 @@ public class AuthController : ControllerBase
         {
             // Actualizar datos que puedan haber cambiado
             user.DisplayName = displayName;
-            user.Email = email;
+            user.Email = normalizedEmail;
             user.AvatarUrl = avatarUrl;
             await _db.SaveChangesAsync();
             return user;
         }
 
         // Buscar por email (tal vez ya se registró con otro provider)
-        user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
+        user = await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
         if (user is not null)
         {
             // Vincular este provider al usuario existente
@@ -188,7 +193,7 @@ public class AuthController : ControllerBase
         // Crear nuevo usuario
         user = new User
         {
-            Email = email,
+            Email = normalizedEmail,
             DisplayName = displayName,
             AvatarUrl = avatarUrl,
             AuthProvider = provider,
