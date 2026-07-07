@@ -52,6 +52,7 @@ public partial class StickyBoardView : UserControl
         var ctrl = CreateNoteControl(note);
         Canvas.SetLeft(ctrl, note.PositionX);
         Canvas.SetTop(ctrl, note.PositionY);
+        Panel.SetZIndex(ctrl, note.ZIndex);
         NotesCanvas.Children.Add(ctrl);
     }
 
@@ -67,6 +68,7 @@ public partial class StickyBoardView : UserControl
                 nc.IsPinned = note.IsPinned;
                 Canvas.SetLeft(nc, note.PositionX);
                 Canvas.SetTop(nc, note.PositionY);
+                Panel.SetZIndex(nc, note.ZIndex);
                 nc.Width = note.Width;
                 nc.Height = note.Height;
                 break;
@@ -102,22 +104,33 @@ public partial class StickyBoardView : UserControl
         ctrl.NoteMouseDown += OnNoteMouseDown;
         ctrl.ContentChanged += OnNoteContentChanged;
         ctrl.DeleteClicked += OnNoteDeleteClicked;
+        ctrl.PinToggled += OnNotePinToggled;
+        ctrl.ColorClicked += OnNoteColorClicked;
 
         // Mouse move/up on canvas handles dragging
         return ctrl;
     }
 
+    private int _maxZIndex;
+    private NoteControl? _selectedNote;
+
     private void OnNoteMouseDown(NoteControl note, MouseEventArgs e)
     {
         _dragNote = note;
+        _selectedNote = note;
         _dragStart = e.GetPosition(NotesCanvas);
         _isDragging = true;
         note.CaptureMouse();
-        Panel.SetZIndex(note, 10);
+
+        // Bring to front
+        _maxZIndex++;
+        Panel.SetZIndex(note, _maxZIndex);
+        _vm.UpdateNoteZIndex(note.NoteId, _maxZIndex);
     }
 
     private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
     {
+        _selectedNote = null;
         // Click on canvas clears selection
     }
 
@@ -144,7 +157,6 @@ public partial class StickyBoardView : UserControl
         {
             _isDragging = false;
             _dragNote.ReleaseMouseCapture();
-            Panel.SetZIndex(_dragNote, 0);
 
             // Notify VM of new position
             _vm.UpdateNotePosition(
@@ -169,11 +181,30 @@ public partial class StickyBoardView : UserControl
         }
     }
 
+    private void OnNotePinToggled(string noteId, bool isPinned)
+    {
+        _vm.UpdateNotePin(noteId, isPinned);
+    }
+
+    private void OnNoteColorClicked(string noteId)
+    {
+        if (_colorPickerOverlay is not null)
+            HideColorPicker();
+
+        _pendingColorNoteId = noteId;
+        ShowColorPicker();
+    }
+
+    private string? _pendingColorNoteId;
+
     private void ColorPicker_Click(object sender, RoutedEventArgs e)
     {
         _showColorPicker = !_showColorPicker;
         if (_showColorPicker)
+        {
+            _pendingColorNoteId = _selectedNote?.NoteId;
             ShowColorPicker();
+        }
         else
             HideColorPicker();
     }
@@ -221,11 +252,9 @@ public partial class StickyBoardView : UserControl
 
     private void ColorButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.Tag is string color)
+        if (sender is Button btn && btn.Tag is string color && _pendingColorNoteId is not null)
         {
-            // Cambiar color de la nota seleccionada (si hay alguna)
-            // Por simplicidad, se aplica a la primera nota en el ViewModel
-            // En una versión completa, manejar selección
+            _vm.UpdateNoteColor(_pendingColorNoteId, color);
             HideColorPicker();
         }
     }

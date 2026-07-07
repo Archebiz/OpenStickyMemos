@@ -19,6 +19,7 @@ public class NoteItem
     public double Width { get; set; } = 200;
     public double Height { get; set; } = 180;
     public bool IsPinned { get; set; }
+    public int ZIndex { get; set; }
 }
 
 public class StickyBoardViewModel : BaseViewModel
@@ -134,6 +135,29 @@ public class StickyBoardViewModel : BaseViewModel
         _ = _api.UpdateNoteAsync(_projectId, noteId, new { positionX = note.PositionX, positionY = note.PositionY });
     }
 
+    public void UpdateNoteZIndex(string noteId, int zIndex)
+    {
+        if (!_notes.TryGetValue(noteId, out var note)) return;
+        note.ZIndex = zIndex;
+        _ = _api.UpdateNoteAsync(_projectId, noteId, new { zIndex });
+    }
+
+    public void UpdateNotePin(string noteId, bool isPinned)
+    {
+        if (!_notes.TryGetValue(noteId, out var note)) return;
+        note.IsPinned = isPinned;
+        _ = _api.UpdateNoteAsync(_projectId, noteId, new { isPinned });
+        NoteUpdated?.Invoke(note);
+    }
+
+    public void UpdateNoteColor(string noteId, string color)
+    {
+        if (!_notes.TryGetValue(noteId, out var note)) return;
+        note.Color = color;
+        _ = _api.UpdateNoteAsync(_projectId, noteId, new { color });
+        NoteUpdated?.Invoke(note);
+    }
+
     public void UpdateNoteContent(string noteId, string title, string content)
     {
         if (!_notes.TryGetValue(noteId, out var note)) return;
@@ -192,6 +216,7 @@ public class StickyBoardViewModel : BaseViewModel
         item.Width = note.Width;
         item.Height = note.Height;
         item.IsPinned = note.IsPinned;
+        item.ZIndex = note.ZIndex;
 
         NoteUpdated?.Invoke(item);
     }
@@ -217,5 +242,6 @@ public class StickyBoardViewModel : BaseViewModel
         Width = n.Width,
         Height = n.Height,
         IsPinned = n.IsPinned,
+        ZIndex = n.ZIndex,
     };
 }

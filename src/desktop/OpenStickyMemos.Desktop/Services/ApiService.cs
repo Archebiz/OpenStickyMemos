@@ -48,6 +48,7 @@ public class NoteResponse
     public double Width { get; set; }
     public double Height { get; set; }
     public bool IsPinned { get; set; }
+    public int ZIndex { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

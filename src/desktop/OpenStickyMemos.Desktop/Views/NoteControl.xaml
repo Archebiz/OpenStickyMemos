@@ -19,34 +19,70 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Pin indicator & actions -->
+            <!-- Toolbar: pin + color + delete -->
             <StackPanel Grid.Row="0" Orientation="Horizontal"
                         HorizontalAlignment="Right" Margin="0 0 0 4">
-                <TextBlock x:Name="PinIndicator" Text="📌" FontSize="12"
-                           Visibility="Collapsed" Margin="0 0 4 0"/>
+                <Button x:Name="PinButton" Content="📌" FontSize="12"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="#888" Cursor="Hand" Padding="2"
+                        ToolTip="Fijar nota" Click="PinButton_Click"/>
+                <Button x:Name="ColorButton" Content="🎨" FontSize="12"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="#888" Cursor="Hand" Padding="2"
+                        ToolTip="Cambiar color" Click="ColorButton_Click"/>
                 <Button x:Name="DeleteButton" Content="×" FontSize="14"
                         Background="Transparent" BorderThickness="0"
                         Foreground="#888" Cursor="Hand" Padding="2"
-                        Click="DeleteButton_Click"/>
+                        ToolTip="Eliminar" Click="DeleteButton_Click"/>
             </StackPanel>
 
-            <!-- Title -->
-            <TextBox x:Name="TitleBox" Grid.Row="1"
-                     Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
-                     FontSize="13" FontWeight="SemiBold"
-                     Background="Transparent" BorderThickness="0"
-                     Margin="0 0 0 4" TextWrapping="Wrap"
-                     AcceptsReturn="False" Foreground="#333"
-                     GotFocus="TitleBox_GotFocus" LostFocus="TitleBox_LostFocus"/>
+            <!-- === VIEW MODE (doble click para editar) === -->
+            <Grid Grid.Row="1" x:Name="ViewPanel" Visibility="Visible">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock x:Name="ViewTitle" Grid.Row="0"
+                           FontSize="13" FontWeight="SemiBold"
+                           Foreground="#333" TextWrapping="Wrap"
+                           Margin="0 0 0 4"/>
+                <TextBlock x:Name="ViewContent" Grid.Row="1"
+                           FontSize="12" Foreground="#555"
+                           TextWrapping="Wrap" Margin="0 0 0 4"/>
+            </Grid>
 
-            <!-- Content -->
-            <TextBox x:Name="ContentBox" Grid.Row="2"
-                     Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"
-                     FontSize="12" Background="Transparent"
-                     BorderThickness="0" TextWrapping="Wrap"
-                     AcceptsReturn="True" Foreground="#555"
-                     MinHeight="40"
-                     GotFocus="ContentBox_GotFocus" LostFocus="ContentBox_LostFocus"/>
+            <!-- === EDIT MODE === -->
+            <Grid Grid.Row="1" x:Name="EditPanel" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBox x:Name="TitleBox" Grid.Row="0"
+                         Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                         FontSize="13" FontWeight="SemiBold"
+                         Background="#FFFFFF80" BorderThickness="1"
+                         BorderBrush="#CCC" Margin="0 0 0 4"
+                         Padding="4" TextWrapping="Wrap"
+                         AcceptsReturn="False" Foreground="#333"
+                         LostFocus="TitleBox_LostFocus"/>
+                <TextBox x:Name="ContentBox" Grid.Row="1"
+                         Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"
+                         FontSize="12" Background="#FFFFFF80"
+                         BorderThickness="1" BorderBrush="#CCC"
+                         Padding="4" TextWrapping="Wrap"
+                         AcceptsReturn="True" Foreground="#555"
+                         MinHeight="40"
+                         LostFocus="ContentBox_LostFocus"/>
+                <StackPanel Grid.Row="2" Orientation="Horizontal"
+                            HorizontalAlignment="Right" Margin="0 4 0 0">
+                    <Button x:Name="SaveButton" Content="✓ Guardar"
+                            FontSize="11" Padding="6 2"
+                            Background="#667eea" Foreground="White"
+                            BorderThickness="0" Cursor="Hand"
+                            Click="SaveButton_Click"/>
+                </StackPanel>
+            </Grid>
 
             <!-- Resize handle (bottom-right) -->
             <Thumb x:Name="ResizeThumb" Grid.Row="2"

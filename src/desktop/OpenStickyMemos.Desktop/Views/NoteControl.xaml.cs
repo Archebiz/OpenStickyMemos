@@ -15,11 +15,11 @@ public partial class NoteControl : UserControl
 
     public static readonly DependencyProperty TitleProperty =
         DependencyProperty.Register(nameof(Title), typeof(string), typeof(NoteControl),
-            new PropertyMetadata(string.Empty));
+            new PropertyMetadata(string.Empty, OnTitleChanged));
 
-    public static readonly DependencyProperty ContentProperty =
+    public static readonly DependencyProperty NoteContentProperty =
         DependencyProperty.Register(nameof(Content), typeof(string), typeof(NoteControl),
-            new PropertyMetadata(string.Empty));
+            new PropertyMetadata(string.Empty, OnContentChanged));
 
     public static readonly DependencyProperty NoteColorProperty =
         DependencyProperty.Register(nameof(NoteColor), typeof(string), typeof(NoteControl),
@@ -63,15 +63,30 @@ public partial class NoteControl : UserControl
 
     public event RoutedEventHandler? DeleteClicked;
     public event Action<string, string, string>? ContentChanged; // noteId, title, content
+    public event Action<string, bool>? PinToggled; // noteId, isPinned
+    public event Action<string>? ColorClicked; // noteId
 
     public NoteControl()
     {
         InitializeComponent();
+        this.DataContext = this;
         this.Loaded += (_, _) => ApplyColor();
         this.MouseEnter += (_, _) => NoteBorder.Effect = new System.Windows.Media.Effects.DropShadowEffect
         { BlurRadius = 12, Opacity = 0.3, ShadowDepth = 3 };
         this.MouseLeave += (_, _) => NoteBorder.Effect = new System.Windows.Media.Effects.DropShadowEffect
         { BlurRadius = 8, Opacity = 0.2, ShadowDepth = 2 };
+    }
+
+    // ── Property changed callbacks ──
+
+    private static void OnTitleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is NoteControl ctrl) ctrl.SyncViewMode();
+    }
+
+    private static void OnContentChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is NoteControl ctrl) ctrl.SyncViewMode();
     }
 
     private static void OnColorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -81,9 +96,58 @@ public partial class NoteControl : UserControl
 
     private static void OnPinnedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is NoteControl ctrl) ctrl.PinIndicator.Visibility =
-            (bool)e.NewValue ? Visibility.Visible : Visibility.Collapsed;
+        if (d is NoteControl ctrl)
+        {
+            var pinned = (bool)e.NewValue;
+            ctrl.PinButton.Opacity = pinned ? 1.0 : 0.4;
+            ctrl.PinButton.ToolTip = pinned ? "Quitar pin" : "Fijar nota";
+        }
     }
+
+    // ── View/Edit mode ──
+
+    private bool _isEditing;
+
+    public void StartEdit()
+    {
+        if (_isEditing) return;
+        _isEditing = true;
+        TitleBox.Text = Title;
+        ContentBox.Text = Content;
+        ViewPanel.Visibility = Visibility.Collapsed;
+        EditPanel.Visibility = Visibility.Visible;
+        TitleBox.Focus();
+        TitleBox.SelectAll();
+    }
+
+    public void EndEdit(bool save = true)
+    {
+        if (!_isEditing) return;
+        _isEditing = false;
+        EditPanel.Visibility = Visibility.Collapsed;
+        ViewPanel.Visibility = Visibility.Visible;
+        if (save)
+        {
+            Title = TitleBox.Text;
+            Content = ContentBox.Text;
+            SyncViewMode();
+            ContentChanged?.Invoke(NoteId, Title, Content);
+        }
+    }
+
+    private void SyncViewMode()
+    {
+        ViewTitle.Text = string.IsNullOrEmpty(Title) ? "(Sin título)" : Title;
+        ViewTitle.FontStyle = string.IsNullOrEmpty(Title) ? FontStyles.Italic : FontStyles.Normal;
+        ViewTitle.Foreground = string.IsNullOrEmpty(Title)
+            ? new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA))
+            : new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33));
+
+        ViewContent.Text = Content ?? string.Empty;
+        ViewContent.Visibility = string.IsNullOrEmpty(Content) ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    // ── Color ──
 
     private void ApplyColor()
     {
@@ -94,22 +158,37 @@ public partial class NoteControl : UserControl
         }
     }
 
+    // ── Event Handlers ──
+
+    private void PinButton_Click(object sender, RoutedEventArgs e)
+    {
+        IsPinned = !IsPinned;
+        PinToggled?.Invoke(NoteId, IsPinned);
+    }
+
+    private void ColorButton_Click(object sender, RoutedEventArgs e)
+    {
+        ColorClicked?.Invoke(NoteId);
+    }
+
     private void DeleteButton_Click(object sender, RoutedEventArgs e)
     {
         DeleteClicked?.Invoke(this, e);
     }
 
-    private void TitleBox_GotFocus(object sender, RoutedEventArgs e) { }
     private void TitleBox_LostFocus(object sender, RoutedEventArgs e)
-        => NotifyContentChanged();
-
-    private void ContentBox_GotFocus(object sender, RoutedEventArgs e) { }
-    private void ContentBox_LostFocus(object sender, RoutedEventArgs e)
-        => NotifyContentChanged();
-
-    private void NotifyContentChanged()
     {
-        ContentChanged?.Invoke(NoteId, Title, Content);
+        // Don't end edit on lost focus - save button handles it
+    }
+
+    private void ContentBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        // Don't end edit on lost focus - save button handles it
+    }
+
+    private void SaveButton_Click(object sender, RoutedEventArgs e)
+    {
+        EndEdit(save: true);
     }
 
     private void ResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
@@ -120,14 +199,26 @@ public partial class NoteControl : UserControl
         Height = newHeight;
     }
 
-    // ── Drag support via Thumb or Mouse ──
+    // ── Double-click to edit ──
+
+    protected override void OnMouseDown(MouseButtonEventArgs e)
+    {
+        base.OnMouseDown(e);
+        if (e.ClickCount == 2 && !_isEditing)
+        {
+            StartEdit();
+            e.Handled = true;
+        }
+    }
+
+    // ── Drag support ──
 
     public event Action<NoteControl, MouseEventArgs>? NoteMouseDown;
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonDown(e);
-        if (e.OriginalSource is not Thumb)
+        if (e.OriginalSource is not Thumb && e.ClickCount == 1)
             NoteMouseDown?.Invoke(this, e);
     }
 }

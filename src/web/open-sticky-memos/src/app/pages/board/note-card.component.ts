@@ -47,6 +47,9 @@ export interface NoteCardData {
         <span class="pin">📌</span>
       }
 
+      <!-- Delete button -->
+      <button class="delete-btn" (click)="deleteNote.emit(note.id); $event.stopPropagation()" title="Eliminar nota">×</button>
+
       @if (isEditing) {
         <div class="edit-mode">
           <input
@@ -245,6 +248,33 @@ export interface NoteCardData {
         color: white;
         font-weight: bold;
         padding: 4px 12px;
+      }
+      .delete-btn {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        border: none;
+        background: rgba(0,0,0,0.08);
+        color: #888;
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.15s, background 0.15s;
+        z-index: 5;
+      }
+      .note-card:hover .delete-btn {
+        opacity: 1;
+      }
+      .delete-btn:hover {
+        background: #e74c3c;
+        color: white;
       }
     `,
   ],

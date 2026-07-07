@@ -75,7 +75,8 @@ public class NoteService : INoteService
             PositionY = request.PositionY,
             Width = request.Width,
             Height = request.Height,
-            IsPinned = request.IsPinned
+            IsPinned = request.IsPinned,
+            ZIndex = request.ZIndex
         };
 
         _db.Notes.Add(note);
@@ -119,6 +120,7 @@ public class NoteService : INoteService
         if (request.Width.HasValue) note.Width = request.Width.Value;
         if (request.Height.HasValue) note.Height = request.Height.Value;
         if (request.IsPinned.HasValue) note.IsPinned = request.IsPinned.Value;
+        if (request.ZIndex.HasValue) note.ZIndex = request.ZIndex.Value;
 
         note.UpdatedAt = DateTime.UtcNow;
 
@@ -180,6 +182,7 @@ public class NoteService : INoteService
         Width = n.Width,
         Height = n.Height,
         IsPinned = n.IsPinned,
+        ZIndex = n.ZIndex,
         CreatedAt = n.CreatedAt,
         UpdatedAt = n.UpdatedAt
     };
