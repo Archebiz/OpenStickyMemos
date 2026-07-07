@@ -72,11 +72,16 @@ public partial class StickyBoardView : UserControl
                     nc.NoteContent = note.Content ?? string.Empty;
                     nc.NoteColor = note.Color;
                     nc.IsPinned = note.IsPinned;
-                    Canvas.SetLeft(nc, note.PositionX);
-                    Canvas.SetTop(nc, note.PositionY);
                     Panel.SetZIndex(nc, note.ZIndex);
-                    nc.Width = note.Width;
-                    nc.Height = note.Height;
+
+                    // No sobreescribir posición/tamaño si estamos arrastrando/redimensionando localmente
+                    if (!_localChanges.Contains(note.Id))
+                    {
+                        Canvas.SetLeft(nc, note.PositionX);
+                        Canvas.SetTop(nc, note.PositionY);
+                        nc.Width = note.Width;
+                        nc.Height = note.Height;
+                    }
                     break;
                 }
             }
@@ -119,6 +124,7 @@ public partial class StickyBoardView : UserControl
         ctrl.BringToFrontClicked += OnBringToFront;
         ctrl.SendToBackClicked += OnSendToBack;
         ctrl.ResizeCompleted += OnResizeCompleted;
+        ctrl.ResizeStarted += OnResizeStarted;
 
         // Mouse move/up on canvas handles dragging
         return ctrl;
@@ -126,9 +132,16 @@ public partial class StickyBoardView : UserControl
 
     private int _maxZIndex;
     private NoteControl? _selectedNote;
+    private readonly HashSet<string> _localChanges = new();
+
+    private void OnResizeStarted(string noteId)
+    {
+        _localChanges.Add(noteId);
+    }
 
     private void OnNoteMouseDown(NoteControl note, MouseEventArgs e)
     {
+        _localChanges.Add(note.NoteId);
         _dragNote = note;
         _selectedNote = note;
         _dragStart = e.GetPosition(NotesCanvas);
@@ -177,6 +190,7 @@ public partial class StickyBoardView : UserControl
                 Canvas.GetLeft(_dragNote),
                 Canvas.GetTop(_dragNote));
 
+            _localChanges.Remove(_dragNote.NoteId);
             _dragNote = null;
         }
     }
@@ -227,6 +241,7 @@ public partial class StickyBoardView : UserControl
 
     private void OnResizeCompleted(string noteId, double width, double height)
     {
+        _localChanges.Remove(noteId);
         _vm.UpdateNoteSize(noteId, width, height);
     }
 

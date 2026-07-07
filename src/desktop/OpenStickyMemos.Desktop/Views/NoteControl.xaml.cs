@@ -68,12 +68,13 @@ public partial class NoteControl : UserControl
     public event Action<string>? BringToFrontClicked; // noteId
     public event Action<string>? SendToBackClicked; // noteId
     public event Action<string, double, double>? ResizeCompleted; // noteId, width, height
+    public event Action<string>? ResizeStarted; // noteId
 
     public NoteControl()
     {
         InitializeComponent();
         this.DataContext = this;
-        this.Loaded += (_, _) => ApplyColor();
+        this.Loaded += (_, _) => { ApplyColor(); ApplyPinStyle(IsPinned); };
         this.MouseEnter += (_, _) => NoteBorder.Effect = new System.Windows.Media.Effects.DropShadowEffect
         { BlurRadius = 12, Opacity = 0.3, ShadowDepth = 3 };
         this.MouseLeave += (_, _) => NoteBorder.Effect = new System.Windows.Media.Effects.DropShadowEffect
@@ -104,12 +105,14 @@ public partial class NoteControl : UserControl
             var pinned = (bool)e.NewValue;
             ctrl.PinButton.Opacity = pinned ? 1.0 : 0.4;
             ctrl.PinButton.ToolTip = pinned ? "Quitar pin" : "Fijar nota";
+            ctrl.ApplyPinStyle(pinned);
         }
     }
 
     // ── View/Edit mode ──
 
     private bool _isEditing;
+    private bool _resizeStarted;
 
     public void StartEdit()
     {
@@ -158,6 +161,25 @@ public partial class NoteControl : UserControl
         {
             try { NoteBorder.Background = (Brush)new BrushConverter().ConvertFrom(NoteColor)!; }
             catch { NoteBorder.Background = new SolidColorBrush(Color.FromRgb(0xFF, 0xE0, 0x66)); }
+        }
+    }
+
+    private void ApplyPinStyle(bool pinned)
+    {
+        if (NoteBorder is not null)
+        {
+            if (pinned)
+            {
+                NoteBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0x66, 0x7E, 0xEA));
+                NoteBorder.BorderThickness = new Thickness(2);
+                PinButton.Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x7E, 0xEA));
+            }
+            else
+            {
+                NoteBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0));
+                NoteBorder.BorderThickness = new Thickness(1);
+                PinButton.Foreground = new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88));
+            }
         }
     }
 
@@ -218,12 +240,23 @@ public partial class NoteControl : UserControl
 
     private void ResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
     {
+        if (IsPinned) return;
+        if (!_resizeStarted)
+        {
+            _resizeStarted = true;
+            ResizeStarted?.Invoke(NoteId);
+        }
         var newWidth = Math.Max(120, ActualWidth + e.HorizontalChange);
         var newHeight = Math.Max(80, ActualHeight + e.VerticalChange);
         Width = newWidth;
         Height = newHeight;
-        // Fire resize event for API persistence
-        ResizeCompleted?.Invoke(NoteId, newWidth, newHeight);
+    }
+
+    private void ResizeThumb_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        _resizeStarted = false;
+        if (!IsPinned)
+            ResizeCompleted?.Invoke(NoteId, Width, Height);
     }
 
     // ── Double-click to edit ──
