@@ -54,6 +54,7 @@ export interface NoteResponse {
   width: number;
   height: number;
   isPinned: boolean;
+  zIndex: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +68,7 @@ export interface CreateNoteRequest {
   width?: number;
   height?: number;
   isPinned?: boolean;
+  zIndex?: number;
 }
 
 export interface UpdateNoteRequest {
@@ -77,6 +79,7 @@ export interface UpdateNoteRequest {
   positionY?: number | null;
   width?: number | null;
   height?: number | null;
+  zIndex?: number | null;
   isPinned?: boolean | null;
 }
 

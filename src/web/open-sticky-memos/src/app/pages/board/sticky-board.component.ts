@@ -88,6 +88,8 @@ import { NoteResponse, ProjectResponse } from '../../models';
             [note]="note"
             (noteChange)="onNoteChange($event)"
             (deleteNote)="onDeleteNote($event)"
+            (bringToFrontNote)="onBringToFront($event)"
+            (sendToBackNote)="onSendToBack($event)"
             (dragStart)="onDragStart($event)"
             (resizeStart)="onResizeStart($event)"
           />
@@ -333,6 +335,7 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     if (this.addingNote) return;
     this.addingNote = true;
     const offset = this.notes.length * 30;
+    this._maxWebZIndex++;
     this.api
       .createNote(this.projectId, {
         positionX: 50 + offset,
@@ -340,6 +343,7 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
         width: 280,
         height: 240,
         color: '#FFE066',
+        zIndex: this._maxWebZIndex,
       })
       .subscribe({
         next: (note) => {
@@ -369,6 +373,27 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
         this.notes = this.notes.filter((n) => n.id !== noteId);
       },
     });
+  }
+
+  private _maxWebZIndex = 100;
+
+  onBringToFront(noteId: string): void {
+    const note = this.notes.find((n) => n.id === noteId);
+    if (!note) return;
+    this._maxWebZIndex++;
+    note.zIndex = this._maxWebZIndex;
+    this.api.updateNote(this.projectId, noteId, { zIndex: note.zIndex }).subscribe();
+    // Refresh array to trigger change detection
+    this.notes = [...this.notes];
+  }
+
+  onSendToBack(noteId: string): void {
+    const note = this.notes.find((n) => n.id === noteId);
+    if (!note) return;
+    this._maxWebZIndex = Math.max(this._maxWebZIndex, note.zIndex);
+    note.zIndex = 0;
+    this.api.updateNote(this.projectId, noteId, { zIndex: 0 }).subscribe();
+    this.notes = [...this.notes];
   }
 
   // ── Drag ──
@@ -481,6 +506,7 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
       width: n.width,
       height: n.height,
       isPinned: n.isPinned,
+      zIndex: n.zIndex,
     };
   }
 }

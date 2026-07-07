@@ -21,6 +21,7 @@ export interface NoteCardData {
   width: number;
   height: number;
   isPinned: boolean;
+  zIndex: number;
 }
 
 @Component({
@@ -35,6 +36,7 @@ export interface NoteCardData {
       [style.width.px]="note.width"
       [style.height.px]="note.height"
       [style.background-color]="note.color"
+      [style.z-index]="note.zIndex"
       [class.editing]="isEditing"
       (mousedown)="onMouseDown($event)"
       (dblclick)="startEdit()"
@@ -42,13 +44,17 @@ export interface NoteCardData {
       <!-- Resize handle -->
       <div class="resize-handle" (mousedown)="onResizeStart($event)"></div>
 
-      <!-- Pin indicator -->
+      <!-- Pin indicator (top-left) -->
       @if (note.isPinned) {
         <span class="pin">📌</span>
       }
 
-      <!-- Delete button -->
-      <button class="delete-btn" (click)="deleteNote.emit(note.id); $event.stopPropagation()" title="Eliminar nota">×</button>
+      <!-- Action buttons (top-right) -->
+      <div class="note-actions">
+        <button class="action-btn" (click)="bringToFront()" title="Traer al frente">⬆</button>
+        <button class="action-btn" (click)="sendToBack()" title="Enviar al fondo">⬇</button>
+        <button class="delete-btn" (click)="deleteNote.emit(note.id); $event.stopPropagation()" title="Eliminar nota">×</button>
+      </div>
 
       @if (isEditing) {
         <div class="edit-mode">
@@ -141,9 +147,41 @@ export interface NoteCardData {
       .pin {
         position: absolute;
         top: 6px;
-        right: 8px;
+        left: 8px;
         font-size: 14px;
         opacity: 0.7;
+        z-index: 6;
+      }
+      .note-actions {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        display: flex;
+        gap: 2px;
+        opacity: 0;
+        transition: opacity 0.15s;
+        z-index: 5;
+      }
+      .note-card:hover .note-actions {
+        opacity: 1;
+      }
+      .action-btn {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        border: none;
+        background: rgba(0,0,0,0.08);
+        color: #888;
+        font-size: 12px;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s;
+      }
+      .action-btn:hover {
+        background: rgba(0,0,0,0.15);
       }
       .view-mode {
         padding: 16px;
@@ -250,9 +288,6 @@ export interface NoteCardData {
         padding: 4px 12px;
       }
       .delete-btn {
-        position: absolute;
-        top: 4px;
-        right: 4px;
         width: 24px;
         height: 24px;
         border-radius: 4px;
@@ -265,12 +300,7 @@ export interface NoteCardData {
         display: flex;
         align-items: center;
         justify-content: center;
-        opacity: 0;
-        transition: opacity 0.15s, background 0.15s;
-        z-index: 5;
-      }
-      .note-card:hover .delete-btn {
-        opacity: 1;
+        transition: background 0.15s;
       }
       .delete-btn:hover {
         background: #e74c3c;
@@ -283,6 +313,8 @@ export class NoteCardComponent implements AfterViewInit {
   @Input() note!: NoteCardData;
   @Output() noteChange = new EventEmitter<NoteCardData>();
   @Output() deleteNote = new EventEmitter<string>();
+  @Output() bringToFrontNote = new EventEmitter<string>();
+  @Output() sendToBackNote = new EventEmitter<string>();
   @Output() dragStart = new EventEmitter<{ noteId: string; mouseX: number; mouseY: number }>();
   @Output() resizeStart = new EventEmitter<{ noteId: string; mouseX: number; mouseY: number }>();
 
@@ -320,6 +352,14 @@ export class NoteCardComponent implements AfterViewInit {
       color: this.editColor,
       isPinned: this.editPinned,
     });
+  }
+
+  bringToFront(): void {
+    this.bringToFrontNote.emit(this.note.id);
+  }
+
+  sendToBack(): void {
+    this.sendToBackNote.emit(this.note.id);
   }
 
   onMouseDown(event: MouseEvent): void {

@@ -63,7 +63,7 @@ public partial class StickyBoardView : UserControl
             if (child is NoteControl nc && nc.NoteId == note.Id)
             {
                 nc.Title = note.Title ?? string.Empty;
-                nc.Content = note.Content ?? string.Empty;
+                nc.NoteContent = note.Content ?? string.Empty;
                 nc.NoteColor = note.Color;
                 nc.IsPinned = note.IsPinned;
                 Canvas.SetLeft(nc, note.PositionX);
@@ -94,7 +94,7 @@ public partial class StickyBoardView : UserControl
         {
             NoteId = note.Id,
             Title = note.Title ?? string.Empty,
-            Content = note.Content ?? string.Empty,
+            NoteContent = note.Content ?? string.Empty,
             NoteColor = note.Color,
             IsPinned = note.IsPinned,
             Width = note.Width,

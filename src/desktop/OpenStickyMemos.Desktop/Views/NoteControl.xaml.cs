@@ -18,7 +18,7 @@ public partial class NoteControl : UserControl
             new PropertyMetadata(string.Empty, OnTitleChanged));
 
     public static readonly DependencyProperty NoteContentProperty =
-        DependencyProperty.Register(nameof(Content), typeof(string), typeof(NoteControl),
+        DependencyProperty.Register(nameof(NoteContent), typeof(string), typeof(NoteControl),
             new PropertyMetadata(string.Empty, OnContentChanged));
 
     public static readonly DependencyProperty NoteColorProperty =
@@ -41,10 +41,10 @@ public partial class NoteControl : UserControl
         set => SetValue(TitleProperty, value);
     }
 
-    public string Content
+    public string NoteContent
     {
-        get => (string)GetValue(ContentProperty);
-        set => SetValue(ContentProperty, value);
+        get => (string)GetValue(NoteContentProperty);
+        set => SetValue(NoteContentProperty, value);
     }
 
     public string NoteColor
@@ -113,7 +113,7 @@ public partial class NoteControl : UserControl
         if (_isEditing) return;
         _isEditing = true;
         TitleBox.Text = Title;
-        ContentBox.Text = Content;
+        ContentBox.Text = NoteContent;
         ViewPanel.Visibility = Visibility.Collapsed;
         EditPanel.Visibility = Visibility.Visible;
         TitleBox.Focus();
@@ -129,9 +129,9 @@ public partial class NoteControl : UserControl
         if (save)
         {
             Title = TitleBox.Text;
-            Content = ContentBox.Text;
+            NoteContent = ContentBox.Text;
             SyncViewMode();
-            ContentChanged?.Invoke(NoteId, Title, Content);
+            ContentChanged?.Invoke(NoteId, Title, NoteContent);
         }
     }
 
@@ -143,8 +143,8 @@ public partial class NoteControl : UserControl
             ? new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA))
             : new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33));
 
-        ViewContent.Text = Content ?? string.Empty;
-        ViewContent.Visibility = string.IsNullOrEmpty(Content) ? Visibility.Collapsed : Visibility.Visible;
+        ViewContent.Text = NoteContent ?? string.Empty;
+        ViewContent.Visibility = string.IsNullOrEmpty(NoteContent) ? Visibility.Collapsed : Visibility.Visible;
     }
 
     // ── Color ──
@@ -178,12 +178,14 @@ public partial class NoteControl : UserControl
 
     private void TitleBox_LostFocus(object sender, RoutedEventArgs e)
     {
-        // Don't end edit on lost focus - save button handles it
+        // Save on focus loss
+        if (_isEditing) SaveButton_Click(sender, e);
     }
 
     private void ContentBox_LostFocus(object sender, RoutedEventArgs e)
     {
-        // Don't end edit on lost focus - save button handles it
+        // Save on focus loss
+        if (_isEditing) SaveButton_Click(sender, e);
     }
 
     private void SaveButton_Click(object sender, RoutedEventArgs e)

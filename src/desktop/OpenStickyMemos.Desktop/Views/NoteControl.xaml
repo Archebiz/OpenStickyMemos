@@ -67,7 +67,7 @@
                          AcceptsReturn="False" Foreground="#333"
                          LostFocus="TitleBox_LostFocus"/>
                 <TextBox x:Name="ContentBox" Grid.Row="1"
-                         Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"
+                         Text="{Binding NoteContent, UpdateSourceTrigger=PropertyChanged}"
                          FontSize="12" Background="#FFFFFF80"
                          BorderThickness="1" BorderBrush="#CCC"
                          Padding="4" TextWrapping="Wrap"
