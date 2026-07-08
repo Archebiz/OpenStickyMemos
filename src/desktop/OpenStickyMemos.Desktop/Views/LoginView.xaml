@@ -434,45 +434,10 @@
                         <StackPanel Grid.Row="1"
                                 HorizontalAlignment="Center"
                                 Margin="0,4,0,0">
-                            <!-- Ícono circular -->
-                            <Border Width="60"
-                                    Height="60"
-                                    CornerRadius="30"
-                                    HorizontalAlignment="Center"
-                                    Margin="0,0,0,14">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0"
-                                            EndPoint="1,1">
-                                        <GradientStop Color="#0EA5E9"
-                                                Offset="0"/>
-                                        <GradientStop Color="#2563EB"
-                                                Offset="1"/>
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                                <Border.Effect>
-                                    <DropShadowEffect Color="#0EA5E9"
-                                            BlurRadius="16"
-                                            ShadowDepth="0"
-                                            Opacity="0.6"/>
-                                </Border.Effect>
-                                <TextBlock Text="&#x1F4DD;"
-                                        FontSize="26"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                            </Border>
-
-                            <TextBlock Text="OpenStickyMemos"
-                                       Foreground="#F1F5F9"
-                                       FontFamily="Segoe UI"
-                                       FontSize="22"
-                                       FontWeight="Bold"
-                                       HorizontalAlignment="Center"/>
-                            <TextBlock Text="Notas colaborativas en tiempo real"
-                                       Foreground="#64748B"
-                                       FontFamily="Segoe UI"
-                                       FontSize="12"
-                                       HorizontalAlignment="Center"
-                                       Margin="0,4,0,0"/>
+                            <Image Source="pack://application:,,,/Resources/Images/logo-nbg.png"
+                                   Width="200"
+                                   Margin="0,0,0,10"
+                                   HorizontalAlignment="Center"/>
                         </StackPanel>
 
                         <!-- Campo Nombre (solo en registro) -->

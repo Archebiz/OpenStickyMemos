@@ -13,6 +13,7 @@ import { ProjectListComponent } from '../projects/project-list.component';
     <div class="dashboard">
       <header class="header">
         <div class="header-left">
+          <img src="assets/images/logo-solo-nbg.png" alt="OpenStickyMemos" class="header-logo" />
           <h2>OpenStickyMemos</h2>
         </div>
         <div class="header-right">
@@ -47,6 +48,15 @@ import { ProjectListComponent } from '../projects/project-list.component';
         padding: 12px 24px;
         background: white;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .header-logo {
+        width: 28px;
+        height: 28px;
       }
       .header-left h2 {
         margin: 0;

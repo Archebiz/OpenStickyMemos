@@ -13,8 +13,7 @@ import { AppConfigService } from '../../core/app-config.service';
     <div class="fp-container">
       <div class="fp-card">
         <div class="logo">
-          <span class="icon">📝</span>
-          <h1>OpenStickyMemos</h1>
+          <img src="assets/images/logo-nbg.png" alt="OpenStickyMemos" class="logo-img" />
         </div>
 
         <!-- Paso 1: Solicitar reset -->
@@ -78,6 +77,7 @@ import { AppConfigService } from '../../core/app-config.service';
   styles: [`
     .fp-container { display:flex; justify-content:center; align-items:center; min-height:100vh; background:linear-gradient(135deg,#667eea,#764ba2); }
     .fp-card { background:white; border-radius:16px; padding:40px; width:100%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,.3); text-align:center; }
+    .logo-img { max-width:200px; height:auto; margin-bottom:16px; }
     .fp-card h2 { font-size:20px; color:#333; margin:0 0 8px 0; }
     .desc { font-size:13px; color:#888; margin:0 0 20px 0; line-height:1.5; }
     .fp-form { display:flex; flex-direction:column; gap:10px; margin-bottom:8px; }

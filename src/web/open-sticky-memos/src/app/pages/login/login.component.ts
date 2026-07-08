@@ -12,9 +12,7 @@ import { AuthService } from '../../core/auth.service';
     <div class="login-container">
       <div class="login-card">
         <div class="logo">
-          <span class="icon">📝</span>
-          <h1>OpenStickyMemos</h1>
-          <p class="subtitle">Notas colaborativas en tiempo real</p>
+          <img src="assets/images/logo-nbg.png" alt="OpenStickyMemos" class="logo-img" />
         </div>
         @if (isLogin) {
           <form (ngSubmit)="onLogin()" class="auth-form">
@@ -45,6 +43,7 @@ import { AuthService } from '../../core/auth.service';
   styles: [`
     .login-container { display:flex; justify-content:center; align-items:center; min-height:100vh; background:linear-gradient(135deg,#667eea,#764ba2); }
     .login-card { background:white; border-radius:16px; padding:40px; width:100%; max-width:400px; box-shadow:0 20px 60px rgba(0,0,0,.3); text-align:center; }
+    .logo-img { max-width:220px; height:auto; margin-bottom:20px; }
     .auth-form { display:flex; flex-direction:column; gap:10px; margin-bottom:8px; }
     .input { padding:10px 12px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
     .input:focus { outline:none; border-color:#667eea; }
