@@ -8,7 +8,7 @@
     <UseWPF>true</UseWPF>
 
     <!-- Assembly metadata -->
-    <AssemblyName>OpenStickyMemos.Desktop</AssemblyName>
+    <AssemblyName>OpenStickyMemos</AssemblyName>
     <Description>Aplicación de escritorio para notas adhesivas colaborativas en tiempo real</Description>
     <Company>OpenStickyMemos</Company>
     <Product>OpenStickyMemos</Product>
