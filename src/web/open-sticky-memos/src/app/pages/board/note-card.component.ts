@@ -6,6 +6,7 @@ import {
   ViewChild,
   ElementRef,
   AfterViewInit,
+  HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -392,13 +393,17 @@ export class NoteCardComponent implements AfterViewInit {
     });
   }
 
+  private touchStartPos: { x: number; y: number } | null = null;
+  private touchIsDragging = false;
+
   onTouchStart(event: TouchEvent): void {
     if (this.isEditing || this.note.isPinned) return;
-    this.dragStart.emit({
-      noteId: this.note.id,
-      mouseX: event.touches[0].clientX,
-      mouseY: event.touches[0].clientY,
-    });
+    // Solo guardamos la posición; el drag se inicia solo si hay movimiento
+    this.touchStartPos = {
+      x: event.touches[0].clientX,
+      y: event.touches[0].clientY,
+    };
+    this.touchIsDragging = false;
   }
 
   onResizeTouchStart(event: TouchEvent): void {
@@ -409,5 +414,35 @@ export class NoteCardComponent implements AfterViewInit {
       mouseX: event.touches[0].clientX,
       mouseY: event.touches[0].clientY,
     });
+  }
+
+  @HostListener('document:touchmove', ['$event'])
+  onDocumentTouchMove(event: TouchEvent): void {
+    if (!this.touchStartPos || this.isEditing || this.note.isPinned) return;
+    const dx = Math.abs(event.touches[0].clientX - this.touchStartPos.x);
+    const dy = Math.abs(event.touches[0].clientY - this.touchStartPos.y);
+    if (dx > 10 || dy > 10) {
+      if (!this.touchIsDragging) {
+        this.touchIsDragging = true;
+        // Iniciamos el drag con la posición original del touchstart
+        this.dragStart.emit({
+          noteId: this.note.id,
+          mouseX: this.touchStartPos.x,
+          mouseY: this.touchStartPos.y,
+        });
+      }
+    }
+  }
+
+  @HostListener('document:touchend')
+  onDocumentTouchEnd(): void {
+    if (this.touchStartPos) {
+      if (!this.touchIsDragging) {
+        // Fue un tap sin arrastre → editar la nota
+        this.startEdit();
+      }
+      this.touchStartPos = null;
+      this.touchIsDragging = false;
+    }
   }
 }

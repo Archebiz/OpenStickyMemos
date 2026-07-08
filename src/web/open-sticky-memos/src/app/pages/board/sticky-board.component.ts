@@ -245,6 +245,7 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
   // Drag / resize state
   private dragging: { noteId: string; startX: number; startY: number; origX: number; origY: number } | null = null;
   private resizing: { noteId: string; startX: number; startY: number; origW: number; origH: number } | null = null;
+  private touchMoveHandler: ((e: TouchEvent) => void) | null = null;
 
   // Debounce for auto-save
   private saveSubject = new Subject<{ noteId: string; changes: Partial<NoteCardData> }>();
@@ -269,12 +270,21 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     this.saveSubject.pipe(debounceTime(500)).subscribe(({ noteId, changes }) => {
       this.api.updateNote(this.projectId, noteId, changes).subscribe();
     });
+
+    // Registrar touchmove con passive: false para poder prevenir scroll/zoom
+    this.touchMoveHandler = (e: TouchEvent) => this.onTouchMove(e);
+    document.addEventListener('touchmove', this.touchMoveHandler, { passive: false });
   }
 
   ngOnDestroy(): void {
     this.signalR.leaveProject(this.projectId);
     this.destroy$.next();
     this.destroy$.complete();
+
+    if (this.touchMoveHandler) {
+      document.removeEventListener('touchmove', this.touchMoveHandler);
+      this.touchMoveHandler = null;
+    }
   }
 
   @HostListener('document:keydown.delete')
@@ -432,8 +442,9 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     }
   }
 
-  @HostListener('document:touchmove', ['$event'])
   onTouchMove(event: TouchEvent): void {
+    if (!this.dragging && !this.resizing) return;
+    event.preventDefault();
     if (this.dragging) {
       const dx = event.touches[0].clientX - this.dragging.startX;
       const dy = event.touches[0].clientY - this.dragging.startY;
