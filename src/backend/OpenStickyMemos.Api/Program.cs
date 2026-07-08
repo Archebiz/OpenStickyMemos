@@ -140,6 +140,8 @@ logger.LogInformation("=== OpenStickyMemos Backend Starting ===");
 logger.LogInformation("ASPNETCORE_URLS: {Urls}", Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "(not set)");
 logger.LogInformation("ASPNETCORE_ENVIRONMENT: {Env}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "(not set)");
 logger.LogInformation("DATABASE_URL present: {Db}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")));
+logger.LogInformation("WEB_BASE_URL: {Url}", Environment.GetEnvironmentVariable("WEB_BASE_URL") ?? "(not set - se usará appsettings o localhost)");
+logger.LogInformation("EMAIL_API_KEY present: {Key}", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("EMAIL_API_KEY")));
 logger.LogInformation("SignalR Hub mapped at: /api/hubs/notes");
 logger.LogInformation("OpenAPI JSON at: /openapi/v1.json");
 logger.LogInformation("Swagger UI at: /swagger");
