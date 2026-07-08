@@ -45,6 +45,24 @@ builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<INoteService, NoteService>();
 
+// ── Email Service ──
+// Por defecto: LogEmailService (solo escribe en consola, ideal para desarrollo).
+// Si se configura EMAIL_API_KEY (variable de entorno) o Email:ApiKey (appsettings),
+// se usa ResendEmailService automáticamente.
+var emailApiKey = Environment.GetEnvironmentVariable("EMAIL_API_KEY")
+                  ?? builder.Configuration["Email:ApiKey"];
+
+if (!string.IsNullOrEmpty(emailApiKey))
+{
+    builder.Services.AddHttpClient<IEmailService, ResendEmailService>();
+    Log.Information("Email service: Resend (configurado con API key)");
+}
+else
+{
+    builder.Services.AddSingleton<IEmailService, LogEmailService>();
+    Log.Information("Email service: Log (modo desarrollo - sin email real)");
+}
+
 // ── FluentValidation ──
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 

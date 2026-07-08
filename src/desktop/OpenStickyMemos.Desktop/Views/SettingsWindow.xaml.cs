@@ -20,6 +20,7 @@ public partial class SettingsWindow : Window
         txtMicrosoftClientId.Text = current.OAuth.Microsoft.ClientId;
         txtMicrosoftTenantId.Text = current.OAuth.Microsoft.TenantId;
         txtMicrosoftRedirectUri.Text = current.OAuth.Microsoft.RedirectUri;
+        txtWebUrl.Text = current.WebUrl;
     }
 
     private void BtnGuardar_Click(object sender, RoutedEventArgs e)
@@ -43,6 +44,7 @@ public partial class SettingsWindow : Window
         settings.OAuth.Microsoft.ClientId = txtMicrosoftClientId.Text.Trim();
         settings.OAuth.Microsoft.TenantId = txtMicrosoftTenantId.Text.Trim();
         settings.OAuth.Microsoft.RedirectUri = txtMicrosoftRedirectUri.Text.Trim();
+        settings.WebUrl = txtWebUrl.Text.Trim();
 
         _settingsService.Save(settings);
 

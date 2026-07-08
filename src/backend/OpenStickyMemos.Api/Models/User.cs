@@ -26,6 +26,11 @@ public class User
     [MaxLength(512)]
     public string? PasswordHash { get; set; }                // For email/password auth
 
+    [MaxLength(512)]
+    public string? PasswordResetToken { get; set; }          // Token para reset de contraseña
+
+    public DateTime? PasswordResetTokenExpiresAt { get; set; } // Expiración del token de reset
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

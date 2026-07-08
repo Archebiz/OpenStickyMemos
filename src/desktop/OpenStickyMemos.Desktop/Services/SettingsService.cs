@@ -8,6 +8,7 @@ public class AppSettings
 {
     public string ApiUrl { get; set; } = "http://localhost:5000";
     public string SignalRUrl { get; set; } = "http://localhost:5000/api/hubs/notes";
+    public string WebUrl { get; set; } = "http://localhost:4200";
     public OAuthSettings OAuth { get; set; } = new();
 }
 
@@ -76,6 +77,8 @@ public class SettingsService : ISettingsService
                         defaults.ApiUrl = userSettings.ApiUrl;
                     if (!string.IsNullOrEmpty(userSettings.SignalRUrl))
                         defaults.SignalRUrl = userSettings.SignalRUrl;
+                    if (!string.IsNullOrEmpty(userSettings.WebUrl))
+                        defaults.WebUrl = userSettings.WebUrl;
                     if (userSettings.OAuth is not null)
                     {
                         if (!string.IsNullOrEmpty(userSettings.OAuth.Google.ClientId))
@@ -97,6 +100,10 @@ public class SettingsService : ISettingsService
         if (!string.IsNullOrEmpty(envSignalR))
             defaults.SignalRUrl = envSignalR;
 
+        var envWebUrl = Environment.GetEnvironmentVariable("WEB_URL");
+        if (!string.IsNullOrEmpty(envWebUrl))
+            defaults.WebUrl = envWebUrl;
+
         Current = defaults;
     }
 
@@ -116,6 +123,7 @@ public class SettingsService : ISettingsService
         // Actualizar Current in-place
         Current.ApiUrl = settings.ApiUrl;
         Current.SignalRUrl = settings.SignalRUrl;
+        Current.WebUrl = settings.WebUrl;
         Current.OAuth = settings.OAuth;
     }
 }

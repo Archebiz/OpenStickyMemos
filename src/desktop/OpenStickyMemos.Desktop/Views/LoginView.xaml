@@ -613,6 +613,17 @@
                                   Style="{StaticResource ModernCheckBox}"
                                   IsChecked="{Binding RememberPassword}"/>
 
+                        <!-- Olvidé mi contraseña -->
+                        <TextBlock Grid.Row="10"
+                                   TextAlignment="Right"
+                                   Margin="0,4,0,0"
+                                   FontSize="11">
+                            <Hyperlink Command="{Binding OpenForgotPasswordCommand}"
+                                       Foreground="#64748B">
+                                ¿Olvidaste tu contraseña?
+                            </Hyperlink>
+                        </TextBlock>
+
                         <!-- Botón Ingresar -->
                         <Button Grid.Row="11"
                                 x:Name="BtnSubmit"

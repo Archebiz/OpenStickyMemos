@@ -182,7 +182,10 @@
                                Margin="0,0,0,8"/>
                     <TextBlock Text="URL del servidor" Foreground="#94A3B8"
                                FontFamily="Segoe UI" FontSize="12" Margin="0,0,0,4"/>
-                    <TextBox x:Name="txtApiUrl" Style="{StaticResource SettingsTextBox}" Margin="0,0,0,16"/>
+                    <TextBox x:Name="txtApiUrl" Style="{StaticResource SettingsTextBox}" Margin="0,0,0,8"/>
+                    <TextBlock Text="URL del frontend web" Foreground="#94A3B8"
+                               FontFamily="Segoe UI" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBox x:Name="txtWebUrl" Style="{StaticResource SettingsTextBox}" Margin="0,0,0,16"/>
 
                     <!-- Sección: Google OAuth -->
                     <TextBlock Text="GOOGLE OAUTH" Foreground="#06B6D4"

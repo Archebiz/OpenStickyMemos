@@ -199,6 +199,27 @@ public partial class LoginViewModel : BaseViewModel
         StartMicrosoftLogin?.Invoke(url);
     }
 
+    [RelayCommand]
+    private void OpenForgotPassword()
+    {
+        var webUrl = _settings.Current.WebUrl?.TrimEnd('/') ?? "http://localhost:4200";
+        var forgotUrl = $"{webUrl}/forgot-password";
+
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = forgotUrl,
+                UseShellExecute = true
+            };
+            System.Diagnostics.Process.Start(psi);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"No se pudo abrir el navegador: {ex.Message}";
+        }
+    }
+
     /// <summary>
     /// Procesa el id_token recibido del WebView2.
     /// </summary>

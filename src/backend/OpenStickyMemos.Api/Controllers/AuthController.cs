@@ -16,17 +16,20 @@ public class AuthController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IJwtService _jwt;
     private readonly IRefreshTokenService _refreshTokenService;
+    private readonly IEmailService _emailService;
     private readonly IConfiguration _configuration;
 
     public AuthController(
         AppDbContext db,
         IJwtService jwt,
         IRefreshTokenService refreshTokenService,
+        IEmailService emailService,
         IConfiguration configuration)
     {
         _db = db;
         _jwt = jwt;
         _refreshTokenService = refreshTokenService;
+        _emailService = emailService;
         _configuration = configuration;
     }
 
@@ -193,6 +196,88 @@ public class AuthController : ControllerBase
         }
 
         return Ok(new { message = "Sesión cerrada exitosamente" });
+    }
+
+    /// <summary>
+    /// POST /api/auth/forgot-password — Solicita reset de contraseña
+    /// Genera un token temporal, lo guarda en BD y envía un email con el link de reset.
+    /// </summary>
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        var normalizedEmail = request.Email.ToLowerInvariant();
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+
+        // Siempre responder con éxito aunque el email no exista (seguridad: no revelar usuarios)
+        if (user is null || user.AuthProvider != "Email")
+        {
+            return Ok(new ForgotPasswordResponse
+            {
+                Message = "Si el email está registrado, recibirás un enlace para restablecer tu contraseña."
+            });
+        }
+
+        // Generar token único y seguro
+        var tokenBytes = new byte[32];
+        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+        rng.GetBytes(tokenBytes);
+        var token = Convert.ToHexString(tokenBytes).ToLowerInvariant();
+
+        // Guardar token con expiración de 1 hora
+        user.PasswordResetToken = token;
+        user.PasswordResetTokenExpiresAt = DateTime.UtcNow.AddHours(1);
+        await _db.SaveChangesAsync();
+
+        // Construir link de reset → apunta al frontend (Angular)
+        var baseUrl = _configuration["Web:BaseUrl"]
+                      ?? _configuration["App:BaseUrl"]
+                      ?? "http://localhost:4200";
+        var resetLink = $"{baseUrl}/forgot-password?token={token}";
+
+        // Enviar email
+        await _emailService.SendPasswordResetEmailAsync(
+            user.Email, resetLink, user.DisplayName);
+
+        var response = new ForgotPasswordResponse
+        {
+            Message = "Si el email está registrado, recibirás un enlace para restablecer tu contraseña."
+        };
+
+        // Solo en desarrollo (LogEmailService) incluimos el link en la respuesta para debug
+        if (_emailService is LogEmailService)
+        {
+            response.DebugResetLink = resetLink;
+        }
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// POST /api/auth/reset-password — Ejecuta el reset de contraseña con el token
+    /// </summary>
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u =>
+            u.PasswordResetToken == request.Token &&
+            u.PasswordResetTokenExpiresAt > DateTime.UtcNow);
+
+        if (user is null)
+            return BadRequest(new { error = "El token es inválido o ha expirado. Solicita un nuevo reset." });
+
+        // Actualizar contraseña
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+        // Limpiar token de reset
+        user.PasswordResetToken = null;
+        user.PasswordResetTokenExpiresAt = null;
+
+        // Revocar todos los refresh tokens (seguridad: cerrar sesiones activas)
+        await _refreshTokenService.RevokeAllUserTokens(user.Id);
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Contraseña actualizada exitosamente. Todas tus sesiones han sido cerradas." });
     }
 
     // ── Helpers ──
