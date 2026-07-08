@@ -1,7 +1,10 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using OpenStickyMemos.Api.Data;
 using OpenStickyMemos.Api.Models;
 
 namespace OpenStickyMemos.Api.Services;
@@ -56,7 +59,7 @@ public class JwtService : IJwtService
     public string GenerateRefreshToken()
     {
         var randomBytes = new byte[64];
-        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+        using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomBytes);
         return Convert.ToBase64String(randomBytes);
     }
@@ -85,5 +88,97 @@ public class JwtService : IJwtService
         {
             return null;
         }
+    }
+}
+
+/// <summary>
+/// Servicio para gestionar el almacenamiento y validación de refresh tokens en BD.
+/// </summary>
+public interface IRefreshTokenService
+{
+    Task<RefreshToken> CreateRefreshToken(User user);
+    Task<RefreshToken?> ValidateAndRotate(string currentToken, Guid userId);
+    Task RevokeAllUserTokens(Guid userId);
+}
+
+public class RefreshTokenService : IRefreshTokenService
+{
+    private readonly AppDbContext _db;
+    private readonly IJwtService _jwt;
+    private readonly IConfiguration _configuration;
+
+    public RefreshTokenService(AppDbContext db, IJwtService jwt, IConfiguration configuration)
+    {
+        _db = db;
+        _jwt = jwt;
+        _configuration = configuration;
+    }
+
+    public async Task<RefreshToken> CreateRefreshToken(User user)
+    {
+        var expiresInDays = double.Parse(
+            _configuration.GetSection("Jwt")["RefreshExpiresInDays"] ?? "7");
+
+        var refreshToken = new RefreshToken
+        {
+            Token = _jwt.GenerateRefreshToken(),
+            UserId = user.Id,
+            ExpiresAt = DateTime.UtcNow.AddDays(expiresInDays)
+        };
+
+        _db.RefreshTokens.Add(refreshToken);
+        await _db.SaveChangesAsync();
+
+        return refreshToken;
+    }
+
+    public async Task<RefreshToken?> ValidateAndRotate(string currentToken, Guid userId)
+    {
+        // Buscar el token activo y no expirado
+        var storedToken = await _db.RefreshTokens
+            .FirstOrDefaultAsync(rt =>
+                rt.Token == currentToken &&
+                rt.UserId == userId &&
+                !rt.IsRevoked &&
+                rt.ExpiresAt > DateTime.UtcNow);
+
+        if (storedToken is null)
+            return null;
+
+        // Revocar el token actual
+        storedToken.IsRevoked = true;
+        storedToken.RevokedAt = DateTime.UtcNow;
+
+        // Crear un nuevo token (rotación)
+        var newToken = _jwt.GenerateRefreshToken();
+        var expiresInDays = double.Parse(
+            _configuration.GetSection("Jwt")["RefreshExpiresInDays"] ?? "7");
+
+        var rotatedToken = new RefreshToken
+        {
+            Token = newToken,
+            UserId = userId,
+            ExpiresAt = DateTime.UtcNow.AddDays(expiresInDays)
+        };
+
+        _db.RefreshTokens.Add(rotatedToken);
+        await _db.SaveChangesAsync();
+
+        return rotatedToken;
+    }
+
+    public async Task RevokeAllUserTokens(Guid userId)
+    {
+        var activeTokens = await _db.RefreshTokens
+            .Where(rt => rt.UserId == userId && !rt.IsRevoked)
+            .ToListAsync();
+
+        foreach (var token in activeTokens)
+        {
+            token.IsRevoked = true;
+            token.RevokedAt = DateTime.UtcNow;
+        }
+
+        await _db.SaveChangesAsync();
     }
 }

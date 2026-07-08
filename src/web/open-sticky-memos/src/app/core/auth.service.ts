@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap, BehaviorSubject } from 'rxjs';
+import { Observable, tap, BehaviorSubject, EMPTY } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { AppConfigService } from './app-config.service';
 
 export interface UserInfo {
@@ -67,8 +68,22 @@ export class AuthService {
       .pipe(tap((res) => this.storeSession(res)));
   }
 
-  /** Logout — limpia la sesión local */
+  /** Logout — revoca tokens en backend y limpia la sesión local */
   logout(): void {
+    const refreshToken = this.getRefreshToken();
+    // Fire-and-forget: intenta revocar el refresh token en el backend
+    if (refreshToken) {
+      this.http
+        .post(`${this.apiUrl}/auth/logout`, { refreshToken })
+        .pipe(catchError(() => EMPTY))
+        .subscribe();
+    }
+
+    this.clearSession();
+  }
+
+  /** Limpia la sesión local sin llamar al backend */
+  clearSession(): void {
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.refreshKey);
     localStorage.removeItem(this.userKey);

@@ -41,6 +41,7 @@ if (connectionString is not null)
 
 // ── Services ──
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<INoteService, NoteService>();
 

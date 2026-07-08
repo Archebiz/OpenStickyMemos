@@ -8,6 +8,7 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
     public DbSet<Note> Notes => Set<Note>();
@@ -45,6 +46,17 @@ public class AppDbContext : DbContext
             entity.HasOne(pm => pm.User)
                   .WithMany(u => u.Memberships)
                   .HasForeignKey(pm => pm.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── RefreshToken ──
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasIndex(rt => rt.Token).IsUnique();
+
+            entity.HasOne(rt => rt.User)
+                  .WithMany()
+                  .HasForeignKey(rt => rt.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 

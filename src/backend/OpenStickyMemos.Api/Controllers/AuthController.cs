@@ -15,12 +15,18 @@ public class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IJwtService _jwt;
+    private readonly IRefreshTokenService _refreshTokenService;
     private readonly IConfiguration _configuration;
 
-    public AuthController(AppDbContext db, IJwtService jwt, IConfiguration configuration)
+    public AuthController(
+        AppDbContext db,
+        IJwtService jwt,
+        IRefreshTokenService refreshTokenService,
+        IConfiguration configuration)
     {
         _db = db;
         _jwt = jwt;
+        _refreshTokenService = refreshTokenService;
         _configuration = configuration;
     }
 
@@ -136,23 +142,57 @@ public class AuthController : ControllerBase
 
     /// <summary>
     /// POST /api/auth/refresh — Renueva el access token usando un refresh token válido
+    /// El refresh token se almacena en BD y se rota (se revoca el anterior y se crea uno nuevo).
     /// </summary>
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
     {
+        // Extraer el userId del access token (aunque esté expirado, nos sirve para identificar al usuario)
         var principal = _jwt.ValidateToken(request.RefreshToken);
-        if (principal is null)
+
+        // El refresh token NO es un JWT, es un string aleatorio.
+        // Extraemos manualmente el userId del cuerpo de la petición.
+        // Buscamos el refresh token en BD sin validar claims.
+        var storedToken = await _db.RefreshTokens
+            .Include(rt => rt.User)
+            .FirstOrDefaultAsync(rt =>
+                rt.Token == request.RefreshToken &&
+                !rt.IsRevoked &&
+                rt.ExpiresAt > DateTime.UtcNow);
+
+        if (storedToken is null)
             return Unauthorized(new { error = "Refresh token inválido o expirado" });
 
-        var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (userId is null || !Guid.TryParse(userId, out var userGuid))
-            return Unauthorized(new { error = "Refresh token inválido" });
+        var user = storedToken.User;
 
-        var user = await _db.Users.FindAsync(userGuid);
-        if (user is null)
-            return Unauthorized(new { error = "Usuario no encontrado" });
+        // Rotar el refresh token (revocar el actual y crear uno nuevo)
+        var newRefreshToken = await _refreshTokenService.ValidateAndRotate(
+            request.RefreshToken, user.Id);
 
-        return await GenerateAuthResponse(user);
+        if (newRefreshToken is null)
+            return Unauthorized(new { error = "Refresh token inválido o expirado" });
+
+        return await GenerateAuthResponse(user, newRefreshToken.Token);
+    }
+
+    /// <summary>
+    /// POST /api/auth/logout — Revoca el refresh token del usuario
+    /// </summary>
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request)
+    {
+        var storedToken = await _db.RefreshTokens
+            .FirstOrDefaultAsync(rt =>
+                rt.Token == request.RefreshToken && !rt.IsRevoked);
+
+        if (storedToken is not null)
+        {
+            storedToken.IsRevoked = true;
+            storedToken.RevokedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
+
+        return Ok(new { message = "Sesión cerrada exitosamente" });
     }
 
     // ── Helpers ──
@@ -205,10 +245,21 @@ public class AuthController : ControllerBase
         return user;
     }
 
-    private async Task<IActionResult> GenerateAuthResponse(User user)
+    private async Task<IActionResult> GenerateAuthResponse(User user, string? existingRefreshToken = null)
     {
         var (accessToken, expiresAt) = _jwt.GenerateAccessToken(user);
-        var refreshToken = _jwt.GenerateRefreshToken();
+
+        // Si ya tenemos un refresh token (rotación), lo usamos; si no, creamos uno nuevo
+        string refreshToken;
+        if (existingRefreshToken is not null)
+        {
+            refreshToken = existingRefreshToken;
+        }
+        else
+        {
+            var newToken = await _refreshTokenService.CreateRefreshToken(user);
+            refreshToken = newToken.Token;
+        }
 
         return Ok(new AuthResponse
         {
