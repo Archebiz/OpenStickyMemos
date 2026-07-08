@@ -40,10 +40,11 @@ export interface NoteCardData {
       [class.editing]="isEditing"
       [class.pinned]="note.isPinned"
       (mousedown)="onMouseDown($event)"
+      (touchstart)="onTouchStart($event)"
       (dblclick)="startEdit()"
     >
       <!-- Resize handle -->
-      <div class="resize-handle" (mousedown)="onResizeStart($event)"></div>
+      <div class="resize-handle" (mousedown)="onResizeStart($event)" (touchstart)="onResizeTouchStart($event)"></div>
 
       <!-- Pin indicator (top-left) -->
       @if (note.isPinned) {
@@ -116,6 +117,7 @@ export interface NoteCardData {
     `
       .note-card {
         position: absolute;
+        touch-action: none;
         border-radius: 8px;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
         cursor: grab;
@@ -144,6 +146,7 @@ export interface NoteCardData {
       }
       .resize-handle {
         position: absolute;
+        touch-action: none;
         bottom: 0;
         right: 0;
         width: 16px;
@@ -386,6 +389,25 @@ export class NoteCardComponent implements AfterViewInit {
       noteId: this.note.id,
       mouseX: event.clientX,
       mouseY: event.clientY,
+    });
+  }
+
+  onTouchStart(event: TouchEvent): void {
+    if (this.isEditing || this.note.isPinned) return;
+    this.dragStart.emit({
+      noteId: this.note.id,
+      mouseX: event.touches[0].clientX,
+      mouseY: event.touches[0].clientY,
+    });
+  }
+
+  onResizeTouchStart(event: TouchEvent): void {
+    if (this.note.isPinned) return;
+    event.stopPropagation();
+    this.resizeStart.emit({
+      noteId: this.note.id,
+      mouseX: event.touches[0].clientX,
+      mouseY: event.touches[0].clientY,
     });
   }
 }

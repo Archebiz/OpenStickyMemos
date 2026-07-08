@@ -432,6 +432,33 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     }
   }
 
+  @HostListener('document:touchmove', ['$event'])
+  onTouchMove(event: TouchEvent): void {
+    if (this.dragging) {
+      const dx = event.touches[0].clientX - this.dragging.startX;
+      const dy = event.touches[0].clientY - this.dragging.startY;
+      this.notes = this.notes.map((n) =>
+        n.id === this.dragging!.noteId
+          ? { ...n, positionX: this.dragging!.origX + dx, positionY: this.dragging!.origY + dy }
+          : n
+      );
+    }
+    if (this.resizing) {
+      const dx = event.touches[0].clientX - this.resizing.startX;
+      const dy = event.touches[0].clientY - this.resizing.startY;
+      this.notes = this.notes.map((n) =>
+        n.id === this.resizing!.noteId
+          ? { ...n, width: Math.max(120, this.resizing!.origW + dx), height: Math.max(80, this.resizing!.origH + dy) }
+          : n
+      );
+    }
+  }
+
+  @HostListener('document:touchend')
+  onTouchEnd(): void {
+    this.onMouseUp();
+  }
+
   @HostListener('document:mouseup')
   onMouseUp(): void {
     if (this.dragging) {
