@@ -39,6 +39,13 @@ public class ResendEmailService : IEmailService
 
         _fromEmail = configuration["Email:FromEmail"] ?? "onboarding@resend.dev";
         _fromName = configuration["Email:FromName"] ?? "OpenStickyMemos";
+
+        // Configurar el header Authorization con Bearer token para Resend API
+        if (!string.IsNullOrEmpty(_apiKey))
+        {
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _apiKey);
+        }
     }
 
     public async Task SendPasswordResetEmailAsync(string to, string resetLink, string? displayName)
