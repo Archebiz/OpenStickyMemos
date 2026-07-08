@@ -34,6 +34,7 @@ En Railway, agrega las siguientes **variables de entorno** en tu proyecto (backe
 | `EMAIL_FROM_EMAIL` | `tudominio@tudominio.com` | ❌ (default: `onboarding@resend.dev`) |
 | `EMAIL_FROM_NAME` | `OpenStickyMemos` | ❌ |
 | `WEB_BASE_URL` | `https://tu-frontend.railway.app` | ✅ Sí (para construir links de reset al frontend) |
+| `Web__BaseUrl` | `https://tu-frontend.railway.app` | Alternativa con doble underscore (convención .NET) |
 
 > El link de reset apunta al **frontend Angular** (`WEB_BASE_URL/forgot-password?token=xxx`),
 > no al backend. Por eso `WEB_BASE_URL` es obligatoria en producción.
@@ -196,7 +197,7 @@ El Desktop WPF abre el navegador web en la URL del frontend al hacer clic en
 | `EMAIL_API_KEY` | API Key de Resend (o el proveedor que uses) |
 | `EMAIL_FROM_EMAIL` | Email remitente |
 | `EMAIL_FROM_NAME` | Nombre del remitente |
-| `WEB_BASE_URL` | URL del frontend web (sin slash final) |
+| `WEB_BASE_URL` | URL del frontend web (sin slash final). También soporta `Web__BaseUrl` (doble underscore) |
 
 ### Desktop (appsettings.json o variable de entorno)
 

@@ -229,7 +229,10 @@ public class AuthController : ControllerBase
         await _db.SaveChangesAsync();
 
         // Construir link de reset → apunta al frontend (Angular)
-        var baseUrl = _configuration["Web:BaseUrl"]
+        // Prioridad: WEB_BASE_URL (env) > Web__BaseUrl (env con doble underscore) > Web:BaseUrl (appsettings) > App:BaseUrl > default
+        var baseUrl = Environment.GetEnvironmentVariable("WEB_BASE_URL")
+                      ?? Environment.GetEnvironmentVariable("Web__BaseUrl")
+                      ?? _configuration["Web:BaseUrl"]
                       ?? _configuration["App:BaseUrl"]
                       ?? "http://localhost:4200";
         var resetLink = $"{baseUrl}/forgot-password?token={token}";
