@@ -6,6 +6,7 @@ import {
   ViewChild,
   ElementRef,
   AfterViewInit,
+  OnDestroy,
   HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -321,9 +322,10 @@ export interface NoteCardData {
     `,
   ],
 })
-export class NoteCardComponent implements AfterViewInit {
+export class NoteCardComponent implements AfterViewInit, OnDestroy {
   @Input() note!: NoteCardData;
   @Output() noteChange = new EventEmitter<NoteCardData>();
+  private touchMoveHandler: ((e: TouchEvent) => void) | null = null;
   @Output() deleteNote = new EventEmitter<string>();
   @Output() bringToFrontNote = new EventEmitter<string>();
   @Output() sendToBackNote = new EventEmitter<string>();
@@ -342,6 +344,19 @@ export class NoteCardComponent implements AfterViewInit {
   editPinned = false;
 
   ngAfterViewInit(): void {}
+
+  ngOnInit(): void {
+    // Registrar con passive: false para que preventDefault() bloquee scroll/zoom
+    this.touchMoveHandler = (e: TouchEvent) => this.onDocumentTouchMove(e);
+    document.addEventListener('touchmove', this.touchMoveHandler, { passive: false });
+  }
+
+  ngOnDestroy(): void {
+    if (this.touchMoveHandler) {
+      document.removeEventListener('touchmove', this.touchMoveHandler);
+      this.touchMoveHandler = null;
+    }
+  }
 
   startEdit(): void {
     this.editTitle = this.note.title ?? '';
@@ -397,7 +412,7 @@ export class NoteCardComponent implements AfterViewInit {
   private touchIsDragging = false;
 
   onTouchStart(event: TouchEvent): void {
-    if (this.isEditing || this.note.isPinned) return;
+    if (this.isEditing) return;
     // Solo guardamos la posición; el drag se inicia solo si hay movimiento
     this.touchStartPos = {
       x: event.touches[0].clientX,
@@ -416,9 +431,11 @@ export class NoteCardComponent implements AfterViewInit {
     });
   }
 
-  @HostListener('document:touchmove', ['$event'])
   onDocumentTouchMove(event: TouchEvent): void {
-    if (!this.touchStartPos || this.isEditing || this.note.isPinned) return;
+    if (!this.touchStartPos || this.isEditing) return;
+    // Prevenir scroll/zoom inmediatamente al tocar una nota
+    event.preventDefault();
+    if (this.note.isPinned) return;
     const dx = Math.abs(event.touches[0].clientX - this.touchStartPos.x);
     const dy = Math.abs(event.touches[0].clientY - this.touchStartPos.y);
     if (dx > 10 || dy > 10) {
