@@ -15,9 +15,8 @@ public partial class StickyBoardView : UserControl
     private bool _isDragging;
     private NoteControl? _dragNote;
 
-    // Color picker state
+    // Color picker state (used by individual note 🎨 buttons)
     private readonly string[] _colors = { "#FFE066", "#FFB3BA", "#BAFFC9", "#BAE1FF", "#E8BAFF", "#FFD9BA", "#BAFFEC", "#FFF3BA" };
-    private bool _showColorPicker;
     private Border? _colorPickerOverlay;
 
     public StickyBoardView()
@@ -112,6 +111,7 @@ public partial class StickyBoardView : UserControl
             NoteContent = note.Content ?? string.Empty,
             NoteColor = note.Color,
             IsPinned = note.IsPinned,
+            AuthorName = note.AuthorName ?? string.Empty,
             Width = note.Width,
             Height = note.Height,
         };
@@ -245,18 +245,6 @@ public partial class StickyBoardView : UserControl
         _vm.UpdateNoteSize(noteId, width, height);
     }
 
-    private void ColorPicker_Click(object sender, RoutedEventArgs e)
-    {
-        _showColorPicker = !_showColorPicker;
-        if (_showColorPicker)
-        {
-            _pendingColorNoteId = _selectedNote?.NoteId;
-            ShowColorPicker();
-        }
-        else
-            HideColorPicker();
-    }
-
     private void ShowColorPicker()
     {
         _colorPickerOverlay = new Border
@@ -313,6 +301,5 @@ public partial class StickyBoardView : UserControl
         {
             ((Grid)Content).Children.Remove(_colorPickerOverlay);
         }
-        _showColorPicker = false;
     }
 }

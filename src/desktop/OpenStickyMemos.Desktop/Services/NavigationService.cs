@@ -25,7 +25,6 @@ public class NavigationService : INavigationService
     public void NavigateTo(Type viewType)
     {
         _history.Push(viewType);
-        NavigationParameter = null; // Limpiar después de usar
         NavigationChanged?.Invoke(viewType);
     }
 
@@ -34,6 +33,7 @@ public class NavigationService : INavigationService
         if (_history.Count > 1)
         {
             _history.Pop(); // Remove current
+            NavigationParameter = null;
             var previous = _history.Peek();
             NavigationChanged?.Invoke(previous);
         }

@@ -20,6 +20,7 @@ public class NoteItem
     public double Height { get; set; } = 180;
     public bool IsPinned { get; set; }
     public int ZIndex { get; set; }
+    public string? AuthorName { get; set; }
 }
 
 public class StickyBoardViewModel : BaseViewModel
@@ -30,7 +31,10 @@ public class StickyBoardViewModel : BaseViewModel
     private readonly IAuthService _auth;
 
     private string _projectId = string.Empty;
+    private string _projectName = string.Empty;
     private readonly Dictionary<string, NoteItem> _notes = new();
+
+    public string ProjectName => _projectName;
     private readonly System.Timers.Timer _debounceTimer;
     private string? _pendingNoteId;
     private string? _pendingTitle;
@@ -77,6 +81,11 @@ public class StickyBoardViewModel : BaseViewModel
                 if (projects.Count == 0) return;
                 _projectId = projects[0].Id;
             }
+
+            // Obtener nombre del proyecto
+            var project = await _api.GetProjectAsync(_projectId);
+            _projectName = project?.Name ?? "Sin nombre";
+            OnPropertyChanged(nameof(ProjectName));
 
             // Cargar notas
             var notes = await _api.GetNotesAsync(_projectId);
@@ -251,5 +260,6 @@ public class StickyBoardViewModel : BaseViewModel
         Height = n.Height,
         IsPinned = n.IsPinned,
         ZIndex = n.ZIndex,
+        AuthorName = n.AuthorName,
     };
 }

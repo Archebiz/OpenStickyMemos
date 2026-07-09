@@ -67,7 +67,7 @@ public partial class MainWindow : Window
             {
                 TitleBar.Visibility = Visibility.Collapsed;
                 MinWidth = 0; MinHeight = 0;
-                Width = 400; Height = 640;
+                Width = 440; Height = 720;
                 ResizeMode = ResizeMode.NoResize;
                 WindowStartupLocation = WindowStartupLocation.CenterScreen;
                 AppWindowChrome.CaptionHeight = 30; // Área de caption para arrastrar ventana

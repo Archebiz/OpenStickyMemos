@@ -6,15 +6,85 @@
              xmlns:local="clr-namespace:OpenStickyMemos.Desktop.Views"
              mc:Ignorable="d"
              Loaded="OnLoaded">
-    <Grid Background="#F0F2F5">
+
+    <UserControl.Resources>
+        <!-- 🔙 Back button style -->
+        <Style x:Key="BackButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="8,4,12,4"/>
+            <Setter Property="Foreground" Value="{StaticResource BrandBlueBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#4A90D915"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ➕ Add note button style -->
+        <Style x:Key="AddNoteButtonStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" CornerRadius="8">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#4A90D9" Offset="0"/>
+                                    <GradientStop Color="#357ABD" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.25" Color="#4A90D9"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bg" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="White" Padding="12 8"
-                BorderBrush="#E0E0E0" BorderThickness="0 0 0 1">
+        <Border Grid.Row="0" Background="White" Padding="16,10,16,10"
+                BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="0,0,0,1">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.08" Color="#000"/>
+            </Border.Effect>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -23,29 +93,31 @@
                 </Grid.ColumnDefinitions>
 
                 <Button Grid.Column="0" Content="← Volver"
-                        Background="Transparent" BorderThickness="0"
-                        Foreground="#667eea" Cursor="Hand"
+                        Style="{StaticResource BackButtonStyle}"
                         Click="BackButton_Click"/>
 
+                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="16,0">
+                    <TextBlock Text="📋" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding ProjectName}"
+                               FontSize="18" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Button Content="🎨" Background="Transparent"
-                            BorderThickness="0" FontSize="18"
-                            Cursor="Hand" Margin="0 0 8 0"
-                            Click="ColorPicker_Click"/>
-                    <Button Content="+ Nueva nota"
-                            Background="#667eea" Foreground="White"
-                            BorderThickness="0" Padding="12 6"
-                            Cursor="Hand"
+                    <Button Content="＋ Nueva nota"
+                            Style="{StaticResource AddNoteButtonStyle}"
                             Click="AddNote_Click"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Canvas -->
+        <!-- Canvas with glassmorphism gradient background -->
         <Canvas Grid.Row="1" x:Name="NotesCanvas"
-                Background="#F0F2F5"
                 ClipToBounds="True"
-                MouseLeftButtonDown="Canvas_MouseDown">
-        </Canvas>
+                MouseLeftButtonDown="Canvas_MouseDown"
+                Background="{StaticResource BgGradientWarm}"/>
     </Grid>
 </UserControl>

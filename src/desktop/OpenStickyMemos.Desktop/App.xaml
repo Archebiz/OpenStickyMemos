@@ -5,13 +5,104 @@
              xmlns:converters="clr-namespace:OpenStickyMemos.Desktop.Converters">
     <Application.Resources>
         <ResourceDictionary>
+            <!-- Converters -->
             <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
             <converters:InvertBoolToVisibilityConverter x:Key="InvertBoolToVis"/>
             <converters:NotNullToVisibilityConverter x:Key="NotNullToVis"/>
             <converters:BoolToStringConverter x:Key="LoginRegisterText" TrueValue="Iniciar sesión" FalseValue="Crear cuenta"/>
             <converters:BoolToStringConverter x:Key="ToggleLoginText" TrueValue="¿No tienes cuenta? Regístrate" FalseValue="¿Ya tienes cuenta? Inicia sesión"/>
-            <DropShadowEffect x:Key="CardShadow" BlurRadius="24" ShadowDepth="4"
-                              Opacity="0.25" Color="#333"/>
+
+            <!-- 🎨 Brand Colors -->
+            <Color x:Key="BrandNavy">#1B2A4A</Color>
+            <Color x:Key="BrandNavyLight">#2C3E6B</Color>
+            <Color x:Key="BrandOrange">#F28C28</Color>
+            <Color x:Key="BrandBlue">#4A90D9</Color>
+            <Color x:Key="BrandCyan">#06B6D4</Color>
+            <Color x:Key="StickyYellow">#FFE066</Color>
+            <Color x:Key="StickyPink">#FFB3BA</Color>
+            <Color x:Key="StickyGreen">#BAFFC9</Color>
+            <Color x:Key="StickyBlue">#BAE1FF</Color>
+            <Color x:Key="StickyPurple">#E8BAFF</Color>
+            <Color x:Key="StickyPeach">#FFD9BA</Color>
+            <Color x:Key="SurfaceLight">#F5F6FA</Color>
+            <Color x:Key="SurfaceWhite">#FFFFFF</Color>
+            <Color x:Key="TextPrimary">#1E293B</Color>
+            <Color x:Key="TextSecondary">#64748B</Color>
+            <Color x:Key="TextMuted">#94A3B8</Color>
+            <Color x:Key="BorderLight">#E2E8F0</Color>
+
+            <!-- 🖌️ Brush Resources -->
+            <SolidColorBrush x:Key="BrandNavyBrush" Color="{StaticResource BrandNavy}"/>
+            <SolidColorBrush x:Key="BrandNavyLightBrush" Color="{StaticResource BrandNavyLight}"/>
+            <SolidColorBrush x:Key="BrandOrangeBrush" Color="{StaticResource BrandOrange}"/>
+            <SolidColorBrush x:Key="BrandBlueBrush" Color="{StaticResource BrandBlue}"/>
+            <SolidColorBrush x:Key="BrandCyanBrush" Color="{StaticResource BrandCyan}"/>
+            <SolidColorBrush x:Key="StickyYellowBrush" Color="{StaticResource StickyYellow}"/>
+            <SolidColorBrush x:Key="SurfaceLightBrush" Color="{StaticResource SurfaceLight}"/>
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimary}"/>
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}"/>
+            <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMuted}"/>
+            <SolidColorBrush x:Key="BorderLightBrush" Color="{StaticResource BorderLight}"/>
+
+            <!-- ☀️ DropShadow Effects -->
+            <DropShadowEffect x:Key="ShadowSm" BlurRadius="4" ShadowDepth="1" Opacity="0.12" Color="#000"/>
+            <DropShadowEffect x:Key="ShadowMd" BlurRadius="12" ShadowDepth="2" Opacity="0.15" Color="#000"/>
+            <DropShadowEffect x:Key="ShadowLg" BlurRadius="20" ShadowDepth="4" Opacity="0.2" Color="#000"/>
+            <DropShadowEffect x:Key="ShadowXl" BlurRadius="30" ShadowDepth="6" Opacity="0.25" Color="#000"/>
+
+            <!-- 🪟 Glassmorphism Effects -->
+            <DropShadowEffect x:Key="GlassShadow" BlurRadius="28" ShadowDepth="6" Opacity="0.18" Color="#000"/>
+            <DropShadowEffect x:Key="GlassShadowHover" BlurRadius="34" ShadowDepth="8" Opacity="0.22" Color="#000"/>
+            <DropShadowEffect x:Key="GlassShadowCard" BlurRadius="20" ShadowDepth="4" Opacity="0.12" Color="#000"/>
+
+            <!-- 🎨 Glassmorphism Brushes -->
+            <LinearGradientBrush x:Key="GlassNoteOverlay" StartPoint="0,0" EndPoint="0.6,1">
+                <GradientStop Offset="0" Color="#25FFFFFF"/>
+                <GradientStop Offset="1" Color="#08FFFFFF"/>
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="GlassToolbarBg" StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Offset="0" Color="#35FFFFFF"/>
+                <GradientStop Offset="1" Color="#20FFFFFF"/>
+            </LinearGradientBrush>
+
+            <!-- 🌈 Background Gradients -->
+            <LinearGradientBrush x:Key="BgGradientWarm" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Offset="0" Color="#DEE8FF"/>
+                <GradientStop Offset="0.4" Color="#FFE8F0"/>
+                <GradientStop Offset="0.7" Color="#F0E8FF"/>
+                <GradientStop Offset="1" Color="#E8FFE8"/>
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="BgGradientCool" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Offset="0" Color="#E8F0FE"/>
+                <GradientStop Offset="0.5" Color="#F0E8FE"/>
+                <GradientStop Offset="1" Color="#E0F7FA"/>
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="GlassBorderBrush" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Offset="0" Color="#60FFFFFF"/>
+                <GradientStop Offset="1" Color="#30FFFFFF"/>
+            </LinearGradientBrush>
+
+            <!-- 📐 ScrollViewer global style -->
+            <Style TargetType="ScrollViewer">
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="PanningMode" Value="Both"/>
+            </Style>
+
+            <!-- 🔤 Base TextBlock style -->
+            <Style TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            </Style>
+
+            <!-- ✏️ Base TextBox style -->
+            <Style TargetType="TextBox">
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                <Setter Property="CaretBrush" Value="{StaticResource BrandCyanBrush}"/>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

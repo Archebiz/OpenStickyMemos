@@ -4,14 +4,78 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             MinWidth="120" MinHeight="80">
-    <Border x:Name="NoteBorder" CornerRadius="8"
-            BorderBrush="#D0D0D0" BorderThickness="1"
-            Padding="12" RenderTransformOrigin="0.5,0.5"
-            Background="#FFE066">
+             MinWidth="140" MinHeight="100">
+
+    <UserControl.Resources>
+        <!-- 🎯 Toolbar button style -->
+        <Style x:Key="ToolbarButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#555"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}"
+                                CornerRadius="4" Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#00000015"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Save button style -->
+        <Style x:Key="SaveButtonStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" CornerRadius="5"
+                                Background="#4A90D9" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border x:Name="NoteBorder" CornerRadius="16"
+            BorderBrush="{StaticResource GlassBorderBrush}" BorderThickness="1"
+            Padding="12,8,12,6" RenderTransformOrigin="0.5,0.5">
+        <!-- Glass background: semi-transparent gradient of the note color -->
+        <Border.Background>
+            <LinearGradientBrush x:Name="NoteBgGradient" StartPoint="0,0" EndPoint="0.7,1">
+                <GradientStop Offset="0" Color="#F0FFE066"/>
+                <GradientStop Offset="1" Color="#C0FFE066"/>
+            </LinearGradientBrush>
+        </Border.Background>
         <Border.Effect>
-            <DropShadowEffect BlurRadius="8" Opacity="0.2" ShadowDepth="2"/>
+            <DropShadowEffect BlurRadius="28" ShadowDepth="6"
+                              Opacity="0.18" Color="#000"/>
         </Border.Effect>
+
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -19,75 +83,124 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Toolbar: z-order + pin + color + delete -->
-            <StackPanel Grid.Row="0" Orientation="Horizontal"
-                        HorizontalAlignment="Right" Margin="0 0 0 4">
-                <Button x:Name="BringFrontButton" Content="⬆" FontSize="10"
-                        Background="Transparent" BorderThickness="0"
-                        Foreground="#888" Cursor="Hand" Padding="2 0"
-                        ToolTip="Traer al frente" Click="BringFrontButton_Click"/>
-                <Button x:Name="SendBackButton" Content="⬇" FontSize="10"
-                        Background="Transparent" BorderThickness="0"
-                        Foreground="#888" Cursor="Hand" Padding="2 0"
-                        ToolTip="Enviar al fondo" Click="SendBackButton_Click"/>
-                <Button x:Name="PinButton" Content="📌" FontSize="12"
-                        Background="Transparent" BorderThickness="0"
-                        Foreground="#888" Cursor="Hand" Padding="2"
-                        ToolTip="Fijar nota" Click="PinButton_Click"/>
-                <Button x:Name="ColorButton" Content="🎨" FontSize="12"
-                        Background="Transparent" BorderThickness="0"
-                        Foreground="#888" Cursor="Hand" Padding="2"
-                        ToolTip="Cambiar color" Click="ColorButton_Click"/>
-                <Button x:Name="DeleteButton" Content="×" FontSize="14"
-                        Background="Transparent" BorderThickness="0"
-                        Foreground="#888" Cursor="Hand" Padding="2"
-                        ToolTip="Eliminar" Click="DeleteButton_Click"/>
-            </StackPanel>
+            <!-- Glass highlight overlay -->
+            <Border Grid.RowSpan="3" CornerRadius="14" Margin="2"
+                    Background="{StaticResource GlassNoteOverlay}"
+                    IsHitTestVisible="False"/>
+
+            <!-- Toolbar: glass style (appears on hover) -->
+            <Border x:Name="ToolbarOverlay" Grid.Row="0"
+                    Background="{StaticResource GlassToolbarBg}"
+                    CornerRadius="10" Padding="5,3"
+                    Margin="-2,-2,-2,0"
+                    Opacity="0.0"
+                    BorderBrush="#30FFFFFF" BorderThickness="0.5">
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right">
+                    <Button x:Name="BringFrontButton" Content="⬆"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            ToolTip="Traer al frente"
+                            Click="BringFrontButton_Click"/>
+                    <Button x:Name="SendBackButton" Content="⬇"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            ToolTip="Enviar al fondo"
+                            Click="SendBackButton_Click"/>
+                    <Button x:Name="PinButton" Content="📌"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            FontSize="10" Width="22" Height="22"
+                            ToolTip="Fijar nota"
+                            Click="PinButton_Click"/>
+                    <Button x:Name="ColorButton" Content="🎨"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            FontSize="10" Width="22" Height="22"
+                            ToolTip="Cambiar color"
+                            Click="ColorButton_Click"/>
+                    <Button x:Name="DeleteButton" Content="🗑"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            FontSize="10" Width="22" Height="22"
+                            ToolTip="Eliminar nota"
+                            Click="DeleteButton_Click"/>
+                </StackPanel>
+            </Border>
 
             <!-- === VIEW MODE (doble click para editar) === -->
-            <Grid Grid.Row="1" x:Name="ViewPanel" Visibility="Visible">
+            <Grid Grid.Row="1" x:Name="ViewPanel" Visibility="Visible"
+                  Margin="0,4,0,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <TextBlock x:Name="ViewTitle" Grid.Row="0"
-                           FontSize="13" FontWeight="SemiBold"
-                           Foreground="#333" TextWrapping="Wrap"
-                           Margin="0 0 0 4"/>
+
+                <!-- Pinned indicator -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,2">
+                    <TextBlock x:Name="PinIndicator" Text="📌" FontSize="9"
+                               Visibility="Collapsed" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="ViewTitle" Grid.Row="0"
+                               FontSize="13" FontWeight="SemiBold"
+                               Foreground="#333" TextWrapping="Wrap"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
                 <TextBlock x:Name="ViewContent" Grid.Row="1"
                            FontSize="12" Foreground="#555"
-                           TextWrapping="Wrap" Margin="0 0 0 4"/>
+                           TextWrapping="Wrap"
+                           Margin="0,2,0,4"/>
+
+                <!-- Placeholder for empty notes -->
+                <TextBlock x:Name="EmptyPlaceholder" Grid.Row="2"
+                           Text="Doble click para editar"
+                           FontSize="11" FontStyle="Italic"
+                           Foreground="#A0A0A0"
+                           TextWrapping="Wrap"
+                           Visibility="Collapsed"
+                           Margin="0,0,0,4"/>
+
+                <!-- Author info -->
+                <StackPanel x:Name="AuthorPanel" Grid.Row="3" Orientation="Horizontal"
+                            Visibility="Collapsed" Margin="0,2,0,0">
+                    <Border Background="#00000015" CornerRadius="8" Padding="5,1,5,1">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="✍" FontSize="8" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="AuthorText" FontSize="9" Foreground="#888"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
             </Grid>
 
             <!-- === EDIT MODE === -->
-            <Grid Grid.Row="1" x:Name="EditPanel" Visibility="Collapsed">
+            <Grid Grid.Row="1" x:Name="EditPanel" Visibility="Collapsed"
+                  Margin="0,2,0,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <TextBox x:Name="TitleBox" Grid.Row="0"
-                         Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
-                         FontSize="13" FontWeight="SemiBold"
-                         Background="#FFFFFF80" BorderThickness="1"
-                         BorderBrush="#CCC" Margin="0 0 0 4"
-                         Padding="4" TextWrapping="Wrap"
-                         AcceptsReturn="False" Foreground="#333"
-                         LostFocus="TitleBox_LostFocus"/>
-                <TextBox x:Name="ContentBox" Grid.Row="1"
-                         Text="{Binding NoteContent, UpdateSourceTrigger=PropertyChanged}"
-                         FontSize="12" Background="#FFFFFF80"
-                         BorderThickness="1" BorderBrush="#CCC"
-                         Padding="4" TextWrapping="Wrap"
-                         AcceptsReturn="True" Foreground="#555"
-                         MinHeight="40"
-                         LostFocus="ContentBox_LostFocus"/>
+                <Border Grid.Row="0" BorderBrush="#D0D0D0" BorderThickness="1"
+                        CornerRadius="5" Margin="0,0,0,4" Background="#FFFFFFB0">
+                    <TextBox x:Name="TitleBox"
+                             Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="13" FontWeight="SemiBold"
+                             Background="Transparent" BorderThickness="0"
+                             Padding="6,4" TextWrapping="Wrap"
+                             AcceptsReturn="False" Foreground="#333"
+                             LostFocus="TitleBox_LostFocus"/>
+                </Border>
+                <Border Grid.Row="1" BorderBrush="#D0D0D0" BorderThickness="1"
+                        CornerRadius="5" Background="#FFFFFFB0" MinHeight="50">
+                    <TextBox x:Name="ContentBox"
+                             Text="{Binding NoteContent, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="12" Background="Transparent"
+                             BorderThickness="0"
+                             Padding="6,4" TextWrapping="Wrap"
+                             AcceptsReturn="True" Foreground="#555"
+                             LostFocus="ContentBox_LostFocus"/>
+                </Border>
                 <StackPanel Grid.Row="2" Orientation="Horizontal"
-                            HorizontalAlignment="Right" Margin="0 4 0 0">
+                            HorizontalAlignment="Right" Margin="0,5,0,0">
                     <Button x:Name="SaveButton" Content="✓ Guardar"
-                            FontSize="11" Padding="6 2"
-                            Background="#667eea" Foreground="White"
-                            BorderThickness="0" Cursor="Hand"
+                            Style="{StaticResource SaveButtonStyle}"
                             Click="SaveButton_Click"/>
                 </StackPanel>
             </Grid>
@@ -95,13 +208,20 @@
             <!-- Resize handle (bottom-right) -->
             <Thumb x:Name="ResizeThumb" Grid.Row="2"
                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                   Width="12" Height="12" Cursor="SizeNWSE"
+                   Width="16" Height="16" Cursor="SizeNWSE"
+                   Margin="0,0,-2,-4"
                    DragDelta="ResizeThumb_DragDelta"
                    DragCompleted="ResizeThumb_DragCompleted">
                 <Thumb.Template>
                     <ControlTemplate>
-                        <Path Data="M0,12 L12,0 L12,12 Z"
-                              Fill="#C0C0C0" Opacity="0.5"/>
+                        <Grid>
+                            <Path Data="M-1,15 L15,-1 L15,15 Z"
+                                  Fill="#00000020" Stroke="#00000030" StrokeThickness="0.5"/>
+                            <Path Data="M3,15 L15,3 L15,15 Z"
+                                  Fill="#00000010" Stroke="#00000020" StrokeThickness="0.5"/>
+                            <Path Data="M7,15 L15,7 L15,15 Z"
+                                  Fill="#00000008"/>
+                        </Grid>
                     </ControlTemplate>
                 </Thumb.Template>
             </Thumb>

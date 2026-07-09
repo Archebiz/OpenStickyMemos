@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 
 namespace OpenStickyMemos.Desktop.Views;
 
@@ -28,6 +29,10 @@ public partial class NoteControl : UserControl
     public static readonly DependencyProperty IsPinnedProperty =
         DependencyProperty.Register(nameof(IsPinned), typeof(bool), typeof(NoteControl),
             new PropertyMetadata(false, OnPinnedChanged));
+
+    public static readonly DependencyProperty AuthorNameProperty =
+        DependencyProperty.Register(nameof(AuthorName), typeof(string), typeof(NoteControl),
+            new PropertyMetadata(string.Empty, OnAuthorChanged));
 
     public string NoteId
     {
@@ -59,6 +64,12 @@ public partial class NoteControl : UserControl
         set => SetValue(IsPinnedProperty, value);
     }
 
+    public string AuthorName
+    {
+        get => (string)GetValue(AuthorNameProperty);
+        set => SetValue(AuthorNameProperty, value);
+    }
+
     // ── Events ──
 
     public event RoutedEventHandler? DeleteClicked;
@@ -70,15 +81,83 @@ public partial class NoteControl : UserControl
     public event Action<string, double, double>? ResizeCompleted; // noteId, width, height
     public event Action<string>? ResizeStarted; // noteId
 
+    // ── Glassmorphism shadow presets ──
+    private static readonly DropShadowEffect NormalShadow = new()
+    {
+        BlurRadius = 28, Opacity = 0.18, ShadowDepth = 6, Color = Colors.Black
+    };
+
+    private static readonly DropShadowEffect HoverShadow = new()
+    {
+        BlurRadius = 34, Opacity = 0.22, ShadowDepth = 8, Color = Colors.Black
+    };
+
     public NoteControl()
     {
         InitializeComponent();
         this.DataContext = this;
-        this.Loaded += (_, _) => { ApplyColor(); ApplyPinStyle(IsPinned); };
-        this.MouseEnter += (_, _) => NoteBorder.Effect = new System.Windows.Media.Effects.DropShadowEffect
-        { BlurRadius = 12, Opacity = 0.3, ShadowDepth = 3 };
-        this.MouseLeave += (_, _) => NoteBorder.Effect = new System.Windows.Media.Effects.DropShadowEffect
-        { BlurRadius = 8, Opacity = 0.2, ShadowDepth = 2 };
+        this.Loaded += OnLoaded;
+        this.MouseEnter += OnMouseEnterNote;
+        this.MouseLeave += OnMouseLeaveNote;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        ApplyColor();
+        ApplyPinStyle(IsPinned);
+        SyncAuthorInfo();
+
+        // Fade-in animation on load
+        this.Opacity = 0;
+        var fadeIn = new System.Windows.Media.Animation.DoubleAnimation
+        {
+            From = 0,
+            To = 1,
+            Duration = TimeSpan.FromMilliseconds(300),
+            EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+        };
+        this.BeginAnimation(OpacityProperty, fadeIn);
+    }
+
+    private void OnMouseEnterNote(object sender, MouseEventArgs e)
+    {
+        NoteBorder.Effect = HoverShadow;
+        ToolbarOverlay.Opacity = 1.0;
+
+        // Subtle scale up
+        var scaleUp = new System.Windows.Media.Animation.DoubleAnimation
+        {
+            From = 1.0,
+            To = 1.02,
+            Duration = TimeSpan.FromMilliseconds(150),
+            EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+        };
+        var scaleTransform = (NoteBorder.RenderTransform as ScaleTransform) ?? new ScaleTransform(1, 1);
+        if (NoteBorder.RenderTransform != scaleTransform)
+            NoteBorder.RenderTransform = scaleTransform;
+        NoteBorder.RenderTransformOrigin = new Point(0.5, 0.5);
+        scaleTransform.BeginAnimation(ScaleTransform.ScaleXProperty, scaleUp);
+        scaleTransform.BeginAnimation(ScaleTransform.ScaleYProperty, scaleUp);
+    }
+
+    private void OnMouseLeaveNote(object sender, MouseEventArgs e)
+    {
+        NoteBorder.Effect = NormalShadow;
+        ToolbarOverlay.Opacity = 0.0;
+
+        // Scale back to normal
+        var scaleDown = new System.Windows.Media.Animation.DoubleAnimation
+        {
+            From = 1.02,
+            To = 1.0,
+            Duration = TimeSpan.FromMilliseconds(150),
+            EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+        };
+        if (NoteBorder.RenderTransform is ScaleTransform st)
+        {
+            st.BeginAnimation(ScaleTransform.ScaleXProperty, scaleDown);
+            st.BeginAnimation(ScaleTransform.ScaleYProperty, scaleDown);
+        }
     }
 
     // ── Property changed callbacks ──
@@ -98,6 +177,11 @@ public partial class NoteControl : UserControl
         if (d is NoteControl ctrl) ctrl.ApplyColor();
     }
 
+    private static void OnAuthorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is NoteControl ctrl) ctrl.SyncAuthorInfo();
+    }
+
     private static void OnPinnedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is NoteControl ctrl)
@@ -105,6 +189,7 @@ public partial class NoteControl : UserControl
             var pinned = (bool)e.NewValue;
             ctrl.PinButton.Opacity = pinned ? 1.0 : 0.4;
             ctrl.PinButton.ToolTip = pinned ? "Quitar pin" : "Fijar nota";
+            ctrl.PinIndicator.Visibility = pinned ? Visibility.Visible : Visibility.Collapsed;
             ctrl.ApplyPinStyle(pinned);
         }
     }
@@ -143,24 +228,51 @@ public partial class NoteControl : UserControl
 
     private void SyncViewMode()
     {
-        ViewTitle.Text = string.IsNullOrEmpty(Title) ? "(Sin título)" : Title;
-        ViewTitle.FontStyle = string.IsNullOrEmpty(Title) ? FontStyles.Italic : FontStyles.Normal;
-        ViewTitle.Foreground = string.IsNullOrEmpty(Title)
-            ? new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA))
-            : new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33));
+        var hasTitle = !string.IsNullOrEmpty(Title);
+        ViewTitle.Text = hasTitle ? Title : "(Sin título)";
+        ViewTitle.FontStyle = hasTitle ? FontStyles.Normal : FontStyles.Italic;
+        ViewTitle.Foreground = hasTitle
+            ? new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33))
+            : new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA));
 
+        var hasContent = !string.IsNullOrEmpty(NoteContent);
         ViewContent.Text = NoteContent ?? string.Empty;
-        ViewContent.Visibility = string.IsNullOrEmpty(NoteContent) ? Visibility.Collapsed : Visibility.Visible;
+        ViewContent.Visibility = hasContent ? Visibility.Visible : Visibility.Collapsed;
+
+        // Show placeholder "Doble click para editar" when note is completely empty
+        var isEmpty = !hasTitle && !hasContent;
+        EmptyPlaceholder.Visibility = isEmpty ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // ── Author ──
+
+    private void SyncAuthorInfo()
+    {
+        var hasAuthor = !string.IsNullOrEmpty(AuthorName);
+        AuthorPanel.Visibility = hasAuthor ? Visibility.Visible : Visibility.Collapsed;
+        AuthorText.Text = AuthorName ?? string.Empty;
     }
 
     // ── Color ──
 
     private void ApplyColor()
     {
-        if (NoteBorder is not null && !string.IsNullOrEmpty(NoteColor))
+        if (NoteBorder is null) return;
+
+        Color baseColor;
+        try { baseColor = (Color)ColorConverter.ConvertFromString(NoteColor)!; }
+        catch { baseColor = Color.FromRgb(0xFF, 0xE0, 0x66); }
+
+        if (NoteBgGradient is not null)
         {
-            try { NoteBorder.Background = (Brush)new BrushConverter().ConvertFrom(NoteColor)!; }
-            catch { NoteBorder.Background = new SolidColorBrush(Color.FromRgb(0xFF, 0xE0, 0x66)); }
+            // Apply glass gradient: top at ~94% opacity, bottom at ~75%
+            NoteBgGradient.GradientStops[0].Color = Color.FromArgb(0xF0, baseColor.R, baseColor.G, baseColor.B);
+            NoteBgGradient.GradientStops[1].Color = Color.FromArgb(0xC0, baseColor.R, baseColor.G, baseColor.B);
+        }
+        else
+        {
+            // Fallback: semi-transparent solid
+            NoteBorder.Background = new SolidColorBrush(Color.FromArgb(0xE0, baseColor.R, baseColor.G, baseColor.B));
         }
     }
 
@@ -170,15 +282,17 @@ public partial class NoteControl : UserControl
         {
             if (pinned)
             {
-                NoteBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0x66, 0x7E, 0xEA));
-                NoteBorder.BorderThickness = new Thickness(2);
-                PinButton.Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x7E, 0xEA));
+                NoteBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0x4A, 0x90, 0xD9));
+                NoteBorder.BorderThickness = new Thickness(2.5);
+                PinButton.Foreground = new SolidColorBrush(Color.FromRgb(0x4A, 0x90, 0xD9));
+                PinButton.FontSize = 11;
             }
             else
             {
                 NoteBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0));
                 NoteBorder.BorderThickness = new Thickness(1);
                 PinButton.Foreground = new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88));
+                PinButton.FontSize = 10;
             }
         }
     }

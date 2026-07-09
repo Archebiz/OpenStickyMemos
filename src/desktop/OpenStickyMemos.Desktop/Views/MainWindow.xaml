@@ -18,35 +18,101 @@
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
+        <!-- 🪟 Window control buttons - glass style -->
         <Style x:Key="WindowButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="#4A5568"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Width" Value="40"/>
-            <Setter Property="Height" Value="32"/>
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="36"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers>
-                <Trigger Property="Tag" Value="close">
-                    <Setter Property="FontSize" Value="16"/>
-                </Trigger>
-                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True">
-                    <Setter Property="Background" Value="#FFFFFF33"/>
-                </DataTrigger>
-                <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                        <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
-                        <Condition Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="close"/>
-                    </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="#E74C3C"/>
-                </MultiDataTrigger>
-            </Style.Triggers>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}"
+                                CornerRadius="0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Tag" Value="close">
+                                <Setter Property="FontSize" Value="16"/>
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True">
+                                <Setter TargetName="bg" Property="Background">
+                                    <Setter.Value>
+                                        <SolidColorBrush Color="#FFFFFF" Opacity="0.25"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                    <Condition Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="close"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter TargetName="bg" Property="Background" Value="#E74C3C"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </MultiDataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 🔒 Logout button - glass style -->
+        <Style x:Key="LogoutButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#30FFFFFF"/>
+            <Setter Property="Foreground" Value="#4A5568"/>
+            <Setter Property="BorderBrush" Value="#40FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#50FFFFFF"/>
+                                <Setter TargetName="bg" Property="BorderBrush" Value="#80FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 👤 User badge - glass style -->
+        <Style x:Key="UserBadgeStyle" TargetType="Border">
+            <Setter Property="Background" Value="#30FFFFFF"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="BorderBrush" Value="#30FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,3,10,3"/>
         </Style>
     </Window.Resources>
 
-    <Border Background="#F0F2F5" CornerRadius="8" Margin="0">
+    <Border CornerRadius="12" Margin="0">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Offset="0" Color="#E8F0FE"/>
+                <GradientStop Offset="0.3" Color="#F0E8FE"/>
+                <GradientStop Offset="0.6" Color="#FFE8F0"/>
+                <GradientStop Offset="1" Color="#E8FFE8"/>
+            </LinearGradientBrush>
+        </Border.Background>
         <Border.Effect>
-            <DropShadowEffect BlurRadius="20" ShadowDepth="2" Opacity="0.3" Color="#333"/>
+            <DropShadowEffect BlurRadius="30" ShadowDepth="4" Opacity="0.3" Color="#1B2A4A"/>
         </Border.Effect>
 
         <Grid>
@@ -55,9 +121,20 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- Custom Title Bar (drag handle) -->
-            <Border x:Name="TitleBar" Grid.Row="0" Background="#667eea" Padding="0" MouseLeftButtonDown="TitleBar_MouseDown">
-                <Grid Height="40">
+            <!-- Custom Glass Title Bar (drag handle) -->
+            <Border x:Name="TitleBar" Grid.Row="0"
+                    Padding="0" MouseLeftButtonDown="TitleBar_MouseDown"
+                    CornerRadius="12,12,0,0"
+                    BorderBrush="#40FFFFFF" BorderThickness="0,0,0,1">
+                <!-- Glass gradient: pastel blue → pastel lavender -->
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Offset="0" Color="#D8E8FF"/>
+                        <GradientStop Offset="0.5" Color="#E8DFFF"/>
+                        <GradientStop Offset="1" Color="#FFE0F0"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid Height="44">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
@@ -65,12 +142,12 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- App title -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="12,0,0,0">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="14,0,0,0">
                         <Image Source="pack://application:,,,/Resources/Images/logo-solo-nbg.png"
-                               Width="20" Height="20" Margin="0,0,8,0"/>
+                               Width="22" Height="22" Margin="0,0,10,0"/>
                         <TextBlock Text="OpenStickyMemos"
                                    FontSize="14" FontWeight="SemiBold"
-                                   Foreground="White" VerticalAlignment="Center"/>
+                                   Foreground="#2D3748" VerticalAlignment="Center"/>
                     </StackPanel>
 
                     <!-- Right side -->
@@ -78,14 +155,18 @@
                         <!-- Logged-in user info -->
                         <StackPanel Orientation="Horizontal"
                                     Visibility="{Binding IsLoggedIn, Converter={StaticResource BoolToVis}}"
-                                    Margin="0 0 8 0">
-                            <TextBlock Text="{Binding UserDisplayName}"
-                                       Foreground="White" VerticalAlignment="Center"
-                                       FontSize="12" Margin="0 0 8 0"/>
+                                    Margin="0,0,12,0">
+                            <Border Style="{StaticResource UserBadgeStyle}" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="👤" FontSize="11" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding UserDisplayName}"
+                                               Foreground="#4A5568" VerticalAlignment="Center"
+                                               FontSize="11" FontWeight="Medium"/>
+                                </StackPanel>
+                            </Border>
                             <Button Content="Cerrar sesión" Command="{Binding LogoutCommand}"
-                                    Background="Transparent" BorderBrush="White"
-                                    Foreground="White" BorderThickness="1"
-                                    Padding="6 2" FontSize="11" Height="26"/>
+                                    Style="{StaticResource LogoutButtonStyle}"
+                                    Margin="8,0,0,0"/>
                         </StackPanel>
 
                         <!-- Window buttons -->

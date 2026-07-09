@@ -7,111 +7,251 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:DashboardViewModel}"
              Loaded="OnLoaded">
-    <Grid Background="#F0F2F5">
+
+    <UserControl.Resources>
+        <!-- ➕ Primary action button -->
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,9"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" CornerRadius="8">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#4A90D9" Offset="0"/>
+                                    <GradientStop Color="#357ABD" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.25" Color="#4A90D9"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bg" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Secondary (cancel) button -->
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#64748B"/>
+            <Setter Property="Background" Value="#F1F5F9"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,9"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}"
+                                CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#E2E8F0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Glassmorphism card style -->
+        <Style x:Key="ProjectCardStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="BorderBrush" Value="{StaticResource GlassBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="18"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Effect" Value="{StaticResource GlassShadowCard}"/>
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0.5,1">
+                        <GradientStop Offset="0" Color="#F8FFFFFF"/>
+                        <GradientStop Offset="1" Color="#E8FFFFFF"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="{StaticResource BgGradientCool}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Top bar -->
-        <Grid Grid.Row="0" Margin="20 16">
+        <Grid Grid.Row="0" Margin="24,20,24,12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="Mis Proyectos" FontSize="20"
-                       FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="📁" FontSize="22" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                <TextBlock Text="Mis Proyectos" FontSize="22"
+                           FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </StackPanel>
             <Button Grid.Column="1" Command="{Binding OpenCreateDialogCommand}"
-                    Content="+ Nuevo proyecto"
-                    Background="#667eea" Foreground="White"
-                    BorderThickness="0" Padding="14 8"
-                    Cursor="Hand"/>
+                    Content="＋ Nuevo proyecto"
+                    Style="{StaticResource PrimaryButtonStyle}"/>
         </Grid>
 
         <!-- Create dialog -->
-        <Border Grid.Row="1" Background="#80000000" Panel.ZIndex="10"
+        <Border Grid.Row="1" Background="#60000000" Panel.ZIndex="10"
                 Visibility="{Binding ShowCreateDialog, Converter={StaticResource BoolToVis}}">
-            <Border Width="380" Height="Auto" Padding="24"
-                    Background="White" CornerRadius="12"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Width="420" Height="Auto" Padding="28"
+                    Background="White" CornerRadius="14"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Effect="{StaticResource ShadowXl}">
                 <StackPanel>
-                    <TextBlock Text="Crear proyecto" FontSize="18"
-                               FontWeight="SemiBold" Margin="0 0 0 16"/>
-                    <TextBox Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}"
-                             FontSize="14" Padding="10" Margin="0 0 0 12"
-                             BorderBrush="#DDD" BorderThickness="1"/>
-                    <TextBox Text="{Binding NewProjectDescription, UpdateSourceTrigger=PropertyChanged}"
-                             FontSize="14" Padding="10" Margin="0 0 0 16"
-                             BorderBrush="#DDD" BorderThickness="1"
-                             MinHeight="60" AcceptsReturn="True"
-                             TextWrapping="Wrap"/>
+                    <TextBlock Text="Crear proyecto" FontSize="20"
+                               FontWeight="SemiBold" Margin="0,0,0,6"
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="Completá los detalles para crear un nuevo tablero"
+                               FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,20"/>
+
+                    <TextBlock Text="Nombre del proyecto" FontSize="12"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,4"/>
+                    <Border BorderBrush="{StaticResource BorderLightBrush}"
+                            BorderThickness="1" CornerRadius="8" Margin="0,0,0,14">
+                        <TextBox Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}"
+                                 FontSize="14" Padding="12,10"
+                                 BorderThickness="0"/>
+                    </Border>
+
+                    <TextBlock Text="Descripción (opcional)" FontSize="12"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,4"/>
+                    <Border BorderBrush="{StaticResource BorderLightBrush}"
+                            BorderThickness="1" CornerRadius="8" Margin="0,0,0,20">
+                        <TextBox Text="{Binding NewProjectDescription, UpdateSourceTrigger=PropertyChanged}"
+                                 FontSize="13" Padding="12,10"
+                                 BorderThickness="0" MinHeight="70"
+                                 AcceptsReturn="True" TextWrapping="Wrap"/>
+                    </Border>
+
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Button Grid.Column="0" Command="{Binding CloseCreateDialogCommand}"
-                                Content="Cancelar" Background="#EEE"
-                                Foreground="#555" BorderThickness="0"
-                                Padding="14 8" Margin="0 0 8 0"/>
-                        <Button Grid.Column="1" Command="{Binding CreateProjectCommand}"
-                                Content="Crear" Background="#667eea"
-                                Foreground="White" BorderThickness="0"
-                                Padding="14 8"/>
+                                Content="Cancelar"
+                                Style="{StaticResource SecondaryButtonStyle}"/>
+                        <Button Grid.Column="2" Command="{Binding CreateProjectCommand}"
+                                Content="Crear proyecto"
+                                Style="{StaticResource PrimaryButtonStyle}"/>
                     </Grid>
                 </StackPanel>
             </Border>
         </Border>
 
         <!-- Loading -->
-        <TextBlock Grid.Row="1" Text="Cargando proyectos..."
-                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}"
-                   HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#888"/>
+        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="⏳" FontSize="32" TextAlignment="Center"/>
+            <TextBlock Text="Cargando proyectos..." FontSize="14"
+                       Foreground="{StaticResource TextMutedBrush}"
+                       TextAlignment="Center" Margin="0,8,0,0"/>
+        </StackPanel>
 
         <!-- Error -->
-        <TextBlock Grid.Row="1" Text="{Binding ErrorMessage}"
-                   Visibility="{Binding ErrorMessage, Converter={StaticResource NotNullToVis}}"
-                   Foreground="#E74C3C" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <Border Grid.Row="1" Background="#FEF2F2" CornerRadius="10"
+                BorderBrush="#FECACA" BorderThickness="1"
+                Padding="16" Margin="24"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                Visibility="{Binding ErrorMessage, Converter={StaticResource NotNullToVis}}">
+            <StackPanel>
+                <TextBlock Text="⚠️" FontSize="24" TextAlignment="Center"/>
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="#DC2626" FontSize="13"
+                           TextAlignment="Center" Margin="0,8,0,0"/>
+            </StackPanel>
+        </Border>
 
         <!-- Empty state -->
         <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
                     Visibility="{Binding HasProjects, Converter={StaticResource InvertBoolToVis}}">
-            <TextBlock Text="📋" FontSize="48" TextAlignment="Center"/>
-            <TextBlock Text="No tienes proyectos aún" FontSize="16"
-                       Foreground="#888" TextAlignment="Center" Margin="0 8 0 0"/>
+            <TextBlock Text="📋" FontSize="56" TextAlignment="Center"/>
+            <TextBlock Text="No tienes proyectos aún" FontSize="17"
+                       Foreground="{StaticResource TextMutedBrush}"
+                       TextAlignment="Center" Margin="0,12,0,4"/>
+            <TextBlock Text="Creá tu primer proyecto para empezar" FontSize="13"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       TextAlignment="Center"/>
         </StackPanel>
 
         <!-- Project list -->
-        <ListView Grid.Row="1" ItemsSource="{Binding Projects}" Margin="20"
-                  Visibility="{Binding HasProjects, Converter={StaticResource BoolToVis}}"
-                  Background="Transparent" BorderThickness="0">
-            <ListView.ItemTemplate>
-                <DataTemplate>
-                    <Border Padding="16" Margin="0 0 0 8" Background="White"
-                            CornerRadius="8" BorderBrush="#EEE" BorderThickness="1"
-                            Cursor="Hand">
-                        <Border.InputBindings>
-                            <MouseBinding Gesture="LeftClick"
-                                Command="{Binding DataContext.OpenProjectCommand,
-                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                CommandParameter="{Binding Id}"/>
-                        </Border.InputBindings>
-                        <StackPanel>
-                            <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding Description}" FontSize="12"
-                                       Foreground="#888" Margin="0 4 0 0"/>
-                            <StackPanel Orientation="Horizontal" Margin="0 8 0 0">
-                                <TextBlock FontSize="11" Foreground="#AAA" Margin="0 0 12 0">
-                                    <Run Text="{Binding MemberCount}"/><Run Text=" miembros"/>
-                                </TextBlock>
-                                <TextBlock FontSize="11" Foreground="#AAA">
-                                    <Run Text="{Binding NoteCount}"/><Run Text=" notas"/>
-                                </TextBlock>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+        <ScrollViewer Grid.Row="1" Margin="24,0,24,16"
+                      Visibility="{Binding HasProjects, Converter={StaticResource BoolToVis}}">
+            <ItemsControl ItemsSource="{Binding Projects}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource ProjectCardStyle}">
+                            <Border.InputBindings>
+                                <MouseBinding Gesture="LeftClick"
+                                    Command="{Binding DataContext.OpenProjectCommand,
+                                        RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding Id}"/>
+                            </Border.InputBindings>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding Description}" FontSize="12"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Margin="0,4,0,0"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxHeight="36"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                        <Border Background="#F1F5F9" CornerRadius="12" Padding="8,2,8,2" Margin="0,0,8,0">
+                                            <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+                                                <Run Text="👤"/> <Run Text="{Binding MemberCount}"/> <Run Text="miembros"/>
+                                            </TextBlock>
+                                        </Border>
+                                        <Border Background="#F1F5F9" CornerRadius="12" Padding="8,2,8,2">
+                                            <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+                                                <Run Text="📝"/> <Run Text="{Binding NoteCount}"/> <Run Text="notas"/>
+                                            </TextBlock>
+                                        </Border>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="1" Text="›" FontSize="24"
+                                           Foreground="{StaticResource TextMutedBrush}"
+                                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
     </Grid>
 </UserControl>
