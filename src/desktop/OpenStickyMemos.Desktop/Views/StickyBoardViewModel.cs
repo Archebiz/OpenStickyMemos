@@ -29,6 +29,7 @@ public class StickyBoardViewModel : BaseViewModel
     private readonly INavigationService _navigation;
     private readonly ISignalRService _signalR;
     private readonly IAuthService _auth;
+    private readonly ISettingsService _settings;
 
     private string _projectId = string.Empty;
     private string _projectName = string.Empty;
@@ -49,12 +50,14 @@ public class StickyBoardViewModel : BaseViewModel
         IApiService api,
         INavigationService navigation,
         ISignalRService signalR,
-        IAuthService auth)
+        IAuthService auth,
+        ISettingsService settings)
     {
         _api = api;
         _navigation = navigation;
         _signalR = signalR;
         _auth = auth;
+        _settings = settings;
         _api.SetToken(auth.AccessToken ?? string.Empty);
 
         // Debounce timer (300ms)
@@ -217,12 +220,31 @@ public class StickyBoardViewModel : BaseViewModel
 
     public async Task<InvitationResponse?> CreateInvitationAsync(object request)
     {
-        return await _api.CreateInvitationAsync(_projectId, request);
+        var result = await _api.CreateInvitationAsync(_projectId, request);
+        if (result is not null)
+            FixInvitationLink(result);
+        return result;
     }
 
     public async Task<List<InvitationResponse>> GetProjectInvitationsAsync()
     {
-        return await _api.GetProjectInvitationsAsync(_projectId);
+        var list = await _api.GetProjectInvitationsAsync(_projectId);
+        foreach (var inv in list)
+            FixInvitationLink(inv);
+        return list;
+    }
+
+    /// <summary>
+    /// Corrige el InvitationLink usando la WebUrl configurada en el desktop,
+    /// en lugar de la que devuelve el backend (que puede ser localhost).
+    /// </summary>
+    private void FixInvitationLink(InvitationResponse inv)
+    {
+        var webUrl = _settings.Current.WebUrl?.TrimEnd('/');
+        if (!string.IsNullOrEmpty(webUrl) && !string.IsNullOrEmpty(inv.Token))
+        {
+            inv.InvitationLink = $"{webUrl}/invite/{inv.Token}";
+        }
     }
 
     // ── SignalR handlers ──

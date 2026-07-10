@@ -72,7 +72,7 @@ public class InvitationService : IInvitationService
 
         var createdBy = await _db.Users.FindAsync(requesterId);
 
-        var baseUrl = _configuration["App:BaseUrl"] ?? "http://localhost:4200";
+        var webBaseUrl = _configuration["Web:BaseUrl"] ?? _configuration["App:BaseUrl"] ?? "http://localhost:4200";
 
         return new InvitationResponse
         {
@@ -81,7 +81,7 @@ public class InvitationService : IInvitationService
             ProjectName = project.Name,
             InvitedEmail = invitation.InvitedEmail,
             Token = token,
-            InvitationLink = $"{baseUrl.TrimEnd('/')}/invite/{token}",
+            InvitationLink = $"{webBaseUrl.TrimEnd('/')}/invite/{token}",
             CreatedById = requesterId,
             CreatedByName = createdBy?.DisplayName ?? "",
             CreatedAt = invitation.CreatedAt,
@@ -96,7 +96,7 @@ public class InvitationService : IInvitationService
         if (project is null || project.OwnerId != requesterId)
             return new List<InvitationResponse>();
 
-        var baseUrl = _configuration["App:BaseUrl"] ?? "http://localhost:4200";
+        var webBaseUrl = _configuration["Web:BaseUrl"] ?? _configuration["App:BaseUrl"] ?? "http://localhost:4200";
 
         return await _db.ProjectInvitations
             .Where(i => i.ProjectId == projectId)
@@ -108,7 +108,7 @@ public class InvitationService : IInvitationService
                 ProjectName = project.Name,
                 InvitedEmail = i.InvitedEmail,
                 Token = i.Token,
-                InvitationLink = $"{baseUrl.TrimEnd('/')}/invite/{i.Token}",
+                InvitationLink = $"{webBaseUrl.TrimEnd('/')}/invite/{i.Token}",
                 CreatedById = i.CreatedById,
                 CreatedByName = i.CreatedBy.DisplayName,
                 CreatedAt = i.CreatedAt,
@@ -192,7 +192,7 @@ public class InvitationService : IInvitationService
 
         var userInfo = await _db.Users.FindAsync(userId);
         var project = invitation.Project;
-        var baseUrl = _configuration["App:BaseUrl"] ?? "http://localhost:4200";
+        var webBaseUrl = _configuration["Web:BaseUrl"] ?? _configuration["App:BaseUrl"] ?? "http://localhost:4200";
 
         // SignalR: notificar a los miembros del proyecto
         var memberInfo = new MemberInfo
@@ -216,7 +216,7 @@ public class InvitationService : IInvitationService
             ProjectName = project.Name,
             InvitedEmail = invitation.InvitedEmail,
             Token = invitation.Token,
-            InvitationLink = $"{baseUrl.TrimEnd('/')}/invite/{invitation.Token}",
+            InvitationLink = $"{webBaseUrl.TrimEnd('/')}/invite/{invitation.Token}",
             CreatedById = invitation.CreatedById,
             CreatedByName = invitation.CreatedBy.DisplayName,
             CreatedAt = invitation.CreatedAt,

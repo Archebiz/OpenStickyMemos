@@ -220,7 +220,40 @@ sequenceDiagram
 ```
 
 ---
+### 🧩 Construcción del link de invitación
 
+El link de invitación se compone como:  
+`{WebBaseUrl}/invite/{token}`
+
+**¿Quién genera el link y cómo se determina la URL base?**
+
+| Capa | Configuración | Valor por defecto | Propósito |
+|------|--------------|-------------------|-----------|
+| **Backend** | `Web:BaseUrl` en `appsettings.json` | `http://localhost:4200` | URL del frontend web Angular |
+| **Backend** | `App:BaseUrl` en `appsettings.json` | `http://localhost:5000` | URL de la API (para reset de contraseña) |
+| **Desktop** | `WebUrl` en `appsettings.json` | `http://localhost:4200` | URL del frontend que el desktop conoce |
+| **Web (Angular)** | `window.location.origin` | — | URL real donde está corriendo el frontend |
+
+**Flujo de construcción:**
+
+1. **Backend** (`InvitationService.CreateAsync`): al crear la invitación, genera el `InvitationLink` usando `Web:BaseUrl` + `/invite/{token}`. Esto funciona correctamente cuando el backend está configurado con la URL del frontend (ej: en Railway mediante variable de entorno `Web__BaseUrl`).
+2. **Desktop** (`StickyBoardViewModel.FixInvitationLink`): al recibir la respuesta del backend, sobrescribe el `InvitationLink` usando su propia configuración `WebUrl`. Esto asegura que aunque el backend apunte a otro entorno, el desktop muestre el link correcto para su frontend configurado.
+3. **Web** (`sticky-board.component.fixInvitationLink`): al recibir la respuesta, sobrescribe el link usando `window.location.origin`. Esto garantiza que el link mostrado en la web siempre use la URL donde el usuario está navegando.
+
+**¿Por qué no confiar solo en el backend?**
+
+El backend podría estar en un entorno diferente al frontend. Por ejemplo:
+- Backend en Railway con `Web:BaseUrl` = `https://miproyecto.railway.app`
+- Desktop apuntando a ese backend pero con frontend en `https://miproyecto.com`
+- El desktop usa su `WebUrl` local para generar el link correcto
+
+**Variable de entorno para producción (Railway):**
+```bash
+# Configurar la URL del frontend web
+Web__BaseUrl=https://miproyecto.up.railway.app
+```
+
+---
 ## �🔐 Decisiones técnicas
 
 | Decisión | Opción | Motivo |

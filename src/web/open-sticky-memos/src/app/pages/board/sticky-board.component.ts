@@ -756,6 +756,7 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
 
     this.api.createInvitation(this.projectId, req).subscribe({
       next: (inv) => {
+        this.fixInvitationLink(inv);
         this.invitations.unshift(inv);
         this.generatingLink = false;
       },
@@ -776,7 +777,10 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
 
   loadInvitations(): void {
     this.api.getProjectInvitations(this.projectId).subscribe({
-      next: (list) => (this.invitations = list),
+      next: (list) => {
+        list.forEach((inv) => this.fixInvitationLink(inv));
+        this.invitations = list;
+      },
     });
   }
 
@@ -788,6 +792,17 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
 
   goBack(): void {
     this.router.navigate(['/dashboard']);
+  }
+
+  /**
+   * Corrige el invitationLink usando la URL actual del frontend,
+   * para evitar que muestre localhost si el backend devuelve otra cosa.
+   */
+  private fixInvitationLink(inv: any): void {
+    const origin = window.location.origin.replace(/\/+$/, '');
+    if (inv?.token) {
+      inv.invitationLink = `${origin}/invite/${inv.token}`;
+    }
   }
 
   // ── Helpers ──
