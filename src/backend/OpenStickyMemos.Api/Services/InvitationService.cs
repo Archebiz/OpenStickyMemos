@@ -147,6 +147,7 @@ public class InvitationService : IInvitationService
     {
         var invitation = await _db.ProjectInvitations
             .Include(i => i.Project)
+            .Include(i => i.CreatedBy)
             .FirstOrDefaultAsync(i => i.Token == token);
 
         if (invitation is null)
