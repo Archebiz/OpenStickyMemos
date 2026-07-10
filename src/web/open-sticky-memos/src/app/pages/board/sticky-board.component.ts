@@ -150,7 +150,7 @@ import { NoteResponse, ProjectResponse, InvitationResponse } from '../../models'
                       </div>
                       <div class="member-actions">
                         <span class="member-role-badge">{{ m.role }}</span>
-                        @if (project.ownerId === userId && m.userId !== project.ownerId) {
+                        @if (project!.ownerId === userId && m.userId !== project!.ownerId) {
                           <button class="btn-remove" (click)="removeMember(m.userId, m.displayName)" title="Remover miembro">✕</button>
                         }
                       </div>
