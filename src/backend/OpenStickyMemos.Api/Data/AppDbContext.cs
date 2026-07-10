@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
+    public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
     public DbSet<Note> Notes => Set<Note>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -58,6 +59,27 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(rt => rt.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── ProjectInvitation ──
+        modelBuilder.Entity<ProjectInvitation>(entity =>
+        {
+            entity.HasIndex(i => i.Token).IsUnique();
+
+            entity.HasOne(i => i.Project)
+                  .WithMany()
+                  .HasForeignKey(i => i.ProjectId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(i => i.CreatedBy)
+                  .WithMany()
+                  .HasForeignKey(i => i.CreatedById)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(i => i.AcceptedByUser)
+                  .WithMany()
+                  .HasForeignKey(i => i.AcceptedByUserId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // ── Note ──

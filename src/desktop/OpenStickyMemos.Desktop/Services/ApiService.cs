@@ -53,6 +53,37 @@ public class NoteResponse
     public DateTime UpdatedAt { get; set; }
 }
 
+// ── Invitaciones ──
+
+public class InvitationResponse
+{
+    public string Id { get; set; } = string.Empty;
+    public string ProjectId { get; set; } = string.Empty;
+    public string ProjectName { get; set; } = string.Empty;
+    public string? InvitedEmail { get; set; }
+    public string Token { get; set; } = string.Empty;
+    public string InvitationLink { get; set; } = string.Empty;
+    public string CreatedById { get; set; } = string.Empty;
+    public string CreatedByName { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
+    public bool IsAccepted { get; set; }
+    public string? AcceptedByUserId { get; set; }
+    public DateTime? AcceptedAt { get; set; }
+}
+
+public class InvitationPublicResponse
+{
+    public string ProjectId { get; set; } = string.Empty;
+    public string ProjectName { get; set; } = string.Empty;
+    public string? ProjectDescription { get; set; }
+    public string? InvitedEmail { get; set; }
+    public string CreatedByName { get; set; } = string.Empty;
+    public DateTime ExpiresAt { get; set; }
+    public bool IsExpired { get; set; }
+    public bool IsAccepted { get; set; }
+}
+
 public interface IApiService
 {
     void SetToken(string token);
@@ -66,6 +97,12 @@ public interface IApiService
     Task<NoteResponse?> CreateNoteAsync(string projectId, object request);
     Task<NoteResponse?> UpdateNoteAsync(string projectId, string noteId, object request);
     Task<bool> DeleteNoteAsync(string projectId, string noteId);
+
+    // ── Invitaciones ──
+    Task<InvitationResponse?> CreateInvitationAsync(string projectId, object request);
+    Task<List<InvitationResponse>> GetProjectInvitationsAsync(string projectId);
+    Task<bool> RevokeInvitationAsync(string projectId, string invitationId);
+    Task<InvitationPublicResponse?> GetInvitationPublicInfoAsync(string token);
 }
 
 public class ApiService : IApiService
@@ -284,5 +321,28 @@ public class ApiService : IApiService
     public async Task<bool> DeleteNoteAsync(string projectId, string noteId)
     {
         return await DeleteAsync($"/api/Projects/{projectId}/notes/{noteId}");
+    }
+
+    // ── Invitaciones ──
+
+    public async Task<InvitationResponse?> CreateInvitationAsync(string projectId, object request)
+    {
+        return await PostAsync<InvitationResponse>($"/api/Projects/{projectId}/invitations", request);
+    }
+
+    public async Task<List<InvitationResponse>> GetProjectInvitationsAsync(string projectId)
+    {
+        return await GetAsync<List<InvitationResponse>>($"/api/Projects/{projectId}/invitations")
+               ?? new List<InvitationResponse>();
+    }
+
+    public async Task<bool> RevokeInvitationAsync(string projectId, string invitationId)
+    {
+        return await DeleteAsync($"/api/Projects/{projectId}/invitations/{invitationId}");
+    }
+
+    public async Task<InvitationPublicResponse?> GetInvitationPublicInfoAsync(string token)
+    {
+        return await GetAsync<InvitationPublicResponse>($"/api/Invitations/{token}");
     }
 }

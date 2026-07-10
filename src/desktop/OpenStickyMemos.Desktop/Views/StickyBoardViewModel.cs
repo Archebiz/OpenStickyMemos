@@ -208,6 +208,23 @@ public class StickyBoardViewModel : BaseViewModel
         _navigation.GoBack();
     }
 
+    // ── Invitaciones ──
+
+    public async Task<MemberInfo?> AddMemberAsync(string email)
+    {
+        return await _api.AddMemberAsync(_projectId, email);
+    }
+
+    public async Task<InvitationResponse?> CreateInvitationAsync(object request)
+    {
+        return await _api.CreateInvitationAsync(_projectId, request);
+    }
+
+    public async Task<List<InvitationResponse>> GetProjectInvitationsAsync()
+    {
+        return await _api.GetProjectInvitationsAsync(_projectId);
+    }
+
     // ── SignalR handlers ──
 
     private void OnRemoteNoteCreated(NoteResponse note)

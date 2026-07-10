@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 
 @Component({
@@ -88,15 +88,22 @@ export class LoginComponent {
   error = '';
   loading = false;
 
-  constructor(private auth: AuthService, private router: Router) {
+  private returnUrl = '';
+
+  constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute) {
     if (this.auth.isLoggedIn()) this.router.navigate(['/dashboard']);
+    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+  }
+
+  private goAfterAuth(): void {
+    this.router.navigateByUrl(this.returnUrl);
   }
 
   onLogin(): void {
     if (!this.email || !this.password) return;
     this.loading = true; this.error = '';
     this.auth.login(this.email, this.password).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
+      next: () => this.goAfterAuth(),
       error: (e) => {
         console.error('[Login] Error completo:', {
           status: e.status,
@@ -115,7 +122,7 @@ export class LoginComponent {
     if (!this.email || !this.password) return;
     this.loading = true; this.error = '';
     this.auth.register(this.email, this.password, this.displayName || undefined).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
+      next: () => this.goAfterAuth(),
       error: (e) => { this.error = e.error?.error || 'Error al registrarse'; this.loading = false; },
     });
   }

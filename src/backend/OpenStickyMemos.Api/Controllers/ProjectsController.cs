@@ -12,10 +12,12 @@ namespace OpenStickyMemos.Api.Controllers;
 public class ProjectsController : ControllerBase
 {
     private readonly IProjectService _projectService;
+    private readonly IInvitationService _invitationService;
 
-    public ProjectsController(IProjectService projectService)
+    public ProjectsController(IProjectService projectService, IInvitationService invitationService)
     {
         _projectService = projectService;
+        _invitationService = invitationService;
     }
 
     /// <summary>
@@ -111,6 +113,47 @@ public class ProjectsController : ControllerBase
 
         if (!removed)
             return BadRequest(new { error = "No se pudo remover el miembro" });
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// POST /api/projects/{id}/invitations — Genera un link de invitación (solo owner)
+    /// </summary>
+    [HttpPost("{id:guid}/invitations")]
+    public async Task<IActionResult> CreateInvitation(Guid id, [FromBody] CreateInvitationRequest request)
+    {
+        var userId = GetUserId();
+        var invitation = await _invitationService.CreateAsync(id, request, userId);
+
+        if (invitation is null)
+            return BadRequest(new { error = "No se pudo crear la invitación. Solo el propietario puede invitar." });
+
+        return Ok(invitation);
+    }
+
+    /// <summary>
+    /// GET /api/projects/{id}/invitations — Lista invitaciones activas de un proyecto (solo owner)
+    /// </summary>
+    [HttpGet("{id:guid}/invitations")]
+    public async Task<IActionResult> GetInvitations(Guid id)
+    {
+        var userId = GetUserId();
+        var invitations = await _invitationService.GetProjectInvitationsAsync(id, userId);
+        return Ok(invitations);
+    }
+
+    /// <summary>
+    /// DELETE /api/projects/{id}/invitations/{invitationId} — Revoca una invitación pendiente (solo owner)
+    /// </summary>
+    [HttpDelete("{id:guid}/invitations/{invitationId:guid}")]
+    public async Task<IActionResult> RevokeInvitation(Guid id, Guid invitationId)
+    {
+        var userId = GetUserId();
+        var revoked = await _invitationService.RevokeAsync(invitationId, id, userId);
+
+        if (!revoked)
+            return BadRequest(new { error = "No se pudo revocar la invitación" });
 
         return NoContent();
     }

@@ -302,4 +302,135 @@ public partial class StickyBoardView : UserControl
             ((Grid)Content).Children.Remove(_colorPickerOverlay);
         }
     }
+
+    // ── Invitation Dialog ──
+
+    private List<InvitationResponse> _activeInvitations = new();
+
+    private void InviteButton_Click(object sender, RoutedEventArgs e)
+    {
+        InvitationOverlay.Visibility = Visibility.Visible;
+        ShowEmailTab_Click(sender, e);
+        _ = LoadInvitationsAsync();
+    }
+
+    private void ShowEmailTab_Click(object sender, RoutedEventArgs e)
+    {
+        EmailTabPanel.Visibility = Visibility.Visible;
+        LinkTabPanel.Visibility = Visibility.Collapsed;
+        EmailTabBtn.Background = (System.Windows.Media.Brush)FindResource("BrandBlueBrush");
+        EmailTabBtn.Foreground = System.Windows.Media.Brushes.White;
+        LinkTabBtn.Background = System.Windows.Media.Brushes.Transparent;
+        LinkTabBtn.Foreground = System.Windows.Media.Brushes.Black;
+    }
+
+    private void ShowLinkTab_Click(object sender, RoutedEventArgs e)
+    {
+        EmailTabPanel.Visibility = Visibility.Collapsed;
+        LinkTabPanel.Visibility = Visibility.Visible;
+        LinkTabBtn.Background = (System.Windows.Media.Brush)FindResource("BrandBlueBrush");
+        LinkTabBtn.Foreground = System.Windows.Media.Brushes.White;
+        EmailTabBtn.Background = System.Windows.Media.Brushes.Transparent;
+        EmailTabBtn.Foreground = System.Windows.Media.Brushes.Black;
+    }
+
+    private async void InviteByEmail_Click(object sender, RoutedEventArgs e)
+    {
+        var email = InviteEmailInput.Text.Trim();
+        if (string.IsNullOrEmpty(email))
+        {
+            InviteEmailMessage.Text = "Ingresá un email válido.";
+            InviteEmailMessage.Foreground = System.Windows.Media.Brushes.Red;
+            return;
+        }
+
+        var result = await _vm.AddMemberAsync(email);
+        if (result is not null)
+        {
+            InviteEmailMessage.Text = $"✅ {email} agregado al proyecto";
+            InviteEmailMessage.Foreground = (System.Windows.Media.Brush)FindResource("BrandBlueBrush");
+            InviteEmailInput.Text = "";
+        }
+        else
+        {
+            InviteEmailMessage.Text = "❌ No se pudo agregar. ¿El usuario existe?";
+            InviteEmailMessage.Foreground = System.Windows.Media.Brushes.Red;
+        }
+    }
+
+    private void RestrictEmail_Checked(object sender, RoutedEventArgs e)
+    {
+        RestrictEmailPanel.Visibility = Visibility.Visible;
+    }
+
+    private void RestrictEmail_Unchecked(object sender, RoutedEventArgs e)
+    {
+        RestrictEmailPanel.Visibility = Visibility.Collapsed;
+    }
+
+    private async void GenerateInvitationLink_Click(object sender, RoutedEventArgs e)
+    {
+        GenerateLinkBtn.IsEnabled = false;
+        GenerateLinkBtn.Content = "Generando...";
+        InvitationLinkError.Text = "";
+
+        var expiresDays = 7;
+        if (ExpiresDaysCombo.SelectedItem is ComboBoxItem item && int.TryParse(item.Tag?.ToString(), out var days))
+            expiresDays = days;
+
+        object request;
+        if (RestrictEmailCheck.IsChecked == true && !string.IsNullOrWhiteSpace(InviteLinkEmailInput.Text))
+            request = new { expiresInDays = expiresDays, invitedEmail = InviteLinkEmailInput.Text.Trim() };
+        else
+            request = new { expiresInDays = expiresDays };
+
+        var result = await _vm.CreateInvitationAsync(request);
+        if (result is not null)
+        {
+            _activeInvitations.Insert(0, result);
+            RefreshActiveLinksList();
+        }
+        else
+        {
+            InvitationLinkError.Text = "Error al generar el link de invitación.";
+        }
+
+        GenerateLinkBtn.IsEnabled = true;
+        GenerateLinkBtn.Content = "🔗 Generar link";
+    }
+
+    private async Task LoadInvitationsAsync()
+    {
+        var invitations = await _vm.GetProjectInvitationsAsync();
+        _activeInvitations = invitations;
+        RefreshActiveLinksList();
+    }
+
+    private void RefreshActiveLinksList()
+    {
+        if (_activeInvitations.Count > 0)
+        {
+            ActiveLinksPanel.Visibility = Visibility.Visible;
+            ActiveLinksTitle.Text = $"Links activos ({_activeInvitations.Count})";
+            ActiveLinksList.ItemsSource = null;
+            ActiveLinksList.ItemsSource = _activeInvitations;
+        }
+        else
+        {
+            ActiveLinksPanel.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void CopyLink_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button btn && btn.DataContext is InvitationResponse inv)
+        {
+            System.Windows.Clipboard.SetText(inv.InvitationLink);
+        }
+    }
+
+    private void CloseInvitationDialog_Click(object sender, RoutedEventArgs e)
+    {
+        InvitationOverlay.Visibility = Visibility.Collapsed;
+    }
 }

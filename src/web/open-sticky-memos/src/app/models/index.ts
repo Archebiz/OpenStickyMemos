@@ -87,3 +87,37 @@ export interface UpdateNotePositionRequest {
   positionX: number;
   positionY: number;
 }
+
+// ── Invitaciones ──
+
+export interface CreateInvitationRequest {
+  invitedEmail?: string | null;
+  expiresInDays?: number;
+}
+
+export interface InvitationResponse {
+  id: string;
+  projectId: string;
+  projectName: string;
+  invitedEmail: string | null;
+  token: string;
+  invitationLink: string;
+  createdById: string;
+  createdByName: string;
+  createdAt: string;
+  expiresAt: string;
+  isAccepted: boolean;
+  acceptedByUserId: string | null;
+  acceptedAt: string | null;
+}
+
+export interface InvitationPublicResponse {
+  projectId: string;
+  projectName: string;
+  projectDescription: string | null;
+  invitedEmail: string | null;
+  createdByName: string;
+  expiresAt: string;
+  isExpired: boolean;
+  isAccepted: boolean;
+}

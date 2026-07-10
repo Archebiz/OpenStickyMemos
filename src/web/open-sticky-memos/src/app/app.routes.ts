@@ -22,6 +22,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'invite/:token',
+    loadComponent: () =>
+      import('./pages/invite/invite.component').then(
+        (m) => m.InviteComponent
+      ),
+  },
+  {
     path: 'dashboard',
     canActivate: [AuthGuard],
     loadComponent: () =>

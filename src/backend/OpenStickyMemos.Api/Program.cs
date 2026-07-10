@@ -43,6 +43,7 @@ if (connectionString is not null)
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<INoteService, NoteService>();
 
 // ── Email Service ──

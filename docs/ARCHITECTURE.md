@@ -51,11 +51,15 @@ graph TB
 erDiagram
     User ||--o{ Project : owns
     User ||--o{ ProjectMember : member
+    User ||--o{ ProjectInvitation : creates
     User ||--o{ Note : author
     Project ||--|{ ProjectMember : has
+    Project ||--|{ ProjectInvitation : has
     Project ||--|{ Note : contains
     ProjectMember ||--|| User : user
     ProjectMember ||--|| Project : project
+    ProjectInvitation ||--|| Project : for
+    ProjectInvitation ||--|| User : created_by
     Note ||--|| Project : belongs
     Note ||--|| User : authored
 
@@ -84,6 +88,19 @@ erDiagram
         guid UserId FK
         enum Role
         datetime JoinedAt
+    }
+
+    ProjectInvitation {
+        guid Id PK
+        guid ProjectId FK
+        string InvitedEmail "nullable"
+        string Token UK
+        guid CreatedById FK
+        datetime CreatedAt
+        datetime ExpiresAt
+        bool IsAccepted
+        guid AcceptedByUserId FK "nullable"
+        datetime AcceptedAt "nullable"
     }
 
     Note {
@@ -151,10 +168,10 @@ OpenStickyMemos/
 │   ├── OpenStickyMemos.slnx
 │   ├── backend/
 │   │   └── OpenStickyMemos.Api/
-│   │       ├── Controllers/     ← Health, Auth, Projects, Notes
-│   │       ├── Models/          ← User, Project, ProjectMember, Note
+│   │       ├── Controllers/     ← Health, Auth, Projects, Notes, Invitations
+│   │       ├── Models/          ← User, Project, ProjectMember, ProjectInvitation, Note
 │   │       ├── Data/            ← AppDbContext + Migrations
-│   │       ├── Services/        ← Jwt, Project, Note services
+│   │       ├── Services/        ← Jwt, Project, Note, Invitation services
 │   │       ├── Hubs/            ← NotesHub (SignalR)
 │   │       └── DTOs/            ← Request/Response + Validators
 │   ├── web/
@@ -174,7 +191,37 @@ OpenStickyMemos/
 
 ---
 
-## 🔐 Decisiones técnicas
+## � Flujo de invitaciones por link
+
+```mermaid
+sequenceDiagram
+    participant O as Owner
+    participant API as Backend
+    participant I as Invitado
+    participant DB as PostgreSQL
+
+    O->>API: POST /projects/{id}/invitations
+    API->>DB: Crea ProjectInvitation con token único
+    API-->>O: InvitationResponse { invitationLink, token, expiresAt }
+    O-->>I: Comparte link (web/desktop/whatsapp/etc)
+    I->>API: GET /api/invitations/{token}
+    API-->>I: InvitationPublicResponse { projectName, createdByName, isExpired }
+    alt No está logueado
+        I->>API: Se redirige a /login?returnUrl=/invite/{token}
+        I->>API: POST /auth/login → JWT
+        API-->>I: AuthResponse
+    end
+    I->>API: POST /api/invitations/{token}/accept (Bearer JWT)
+    API->>DB: Crea ProjectMember + marca IsAccepted=true
+    API-->>I: InvitationResponse { isAccepted=true }
+    API-->>Grupo SignalR: MemberAdded (broadcast a miembros del proyecto)
+    I->>API: GET /projects/{id}/notes
+    API-->>I: Notes del proyecto
+```
+
+---
+
+## �🔐 Decisiones técnicas
 
 | Decisión | Opción | Motivo |
 |----------|--------|--------|
@@ -204,8 +251,13 @@ OpenStickyMemos/
 | `GET` | `/api/projects/{id}` | 🔐 | Detalle proyecto |
 | `PUT` | `/api/projects/{id}` | 🔐 | Actualizar proyecto |
 | `DELETE` | `/api/projects/{id}` | 🔐 | Eliminar proyecto |
-| `POST` | `/api/projects/{id}/members` | 🔐 | Invitar miembro |
+| `POST` | `/api/projects/{id}/members` | 🔐 | Invitar miembro por email |
 | `DELETE` | `/api/projects/{id}/members/{userId}` | 🔐 | Remover miembro |
+| `POST` | `/api/projects/{id}/invitations` | 🔐 | Generar link de invitación (owner) |
+| `GET` | `/api/projects/{id}/invitations` | 🔐 | Listar invitaciones activas (owner) |
+| `DELETE` | `/api/projects/{id}/invitations/{iid}` | 🔐 | Revocar invitación (owner) |
+| `GET` | `/api/invitations/{token}` | — | Info pública de invitación |
+| `POST` | `/api/invitations/{token}/accept` | 🔐 | Aceptar invitación |
 | `GET` | `/api/projects/{id}/notes` | 🔐 | Notas del proyecto |
 | `POST` | `/api/projects/{id}/notes` | 🔐 | Crear nota |
 | `PUT` | `/api/projects/{id}/notes/{nid}` | 🔐 | Actualizar nota |

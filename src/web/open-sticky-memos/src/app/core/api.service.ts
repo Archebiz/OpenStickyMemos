@@ -12,6 +12,9 @@ import {
   CreateNoteRequest,
   UpdateNoteRequest,
   UpdateNotePositionRequest,
+  CreateInvitationRequest,
+  InvitationResponse,
+  InvitationPublicResponse,
 } from '../models';
 
 @Injectable()
@@ -81,5 +84,29 @@ export class ApiService {
 
   deleteNote(projectId: string, noteId: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/projects/${projectId}/notes/${noteId}`);
+  }
+
+  // ── Invitaciones ──
+
+  createInvitation(projectId: string, req: CreateInvitationRequest): Observable<InvitationResponse> {
+    return this.http.post<InvitationResponse>(`${this.apiUrl}/projects/${projectId}/invitations`, req);
+  }
+
+  getProjectInvitations(projectId: string): Observable<InvitationResponse[]> {
+    return this.http.get<InvitationResponse[]>(`${this.apiUrl}/projects/${projectId}/invitations`);
+  }
+
+  revokeInvitation(projectId: string, invitationId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/projects/${projectId}/invitations/${invitationId}`);
+  }
+
+  /** Público (sin auth): obtiene info de una invitación por token */
+  getInvitationPublicInfo(token: string): Observable<InvitationPublicResponse> {
+    return this.http.get<InvitationPublicResponse>(`${this.apiUrl}/invitations/${token}`);
+  }
+
+  /** Acepta una invitación (requiere auth) */
+  acceptInvitation(token: string): Observable<InvitationResponse> {
+    return this.http.post<InvitationResponse>(`${this.apiUrl}/invitations/${token}/accept`, {});
   }
 }

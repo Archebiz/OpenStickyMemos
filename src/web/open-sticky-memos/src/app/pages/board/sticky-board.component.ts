@@ -5,17 +5,18 @@ import {
   HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { SignalRService } from '../../core/signalr.service';
 import { NoteCardComponent, NoteCardData } from './note-card.component';
-import { NoteResponse, ProjectResponse } from '../../models';
+import { NoteResponse, ProjectResponse, InvitationResponse } from '../../models';
 
 @Component({
   selector: 'app-sticky-board',
   standalone: true,
-  imports: [CommonModule, NoteCardComponent],
+  imports: [CommonModule, FormsModule, NoteCardComponent],
   template: `
     <div class="board-container">
       <!-- Top bar -->
@@ -26,7 +27,7 @@ import { NoteResponse, ProjectResponse } from '../../models';
         }
         <div class="header-actions">
           @if (project && project.ownerId === userId) {
-            <button class="btn-share" (click)="showShareDialog = true">
+            <button class="btn-share" (click)="openShareDialog()">
               👥 Invitar
             </button>
           }
@@ -40,35 +41,122 @@ import { NoteResponse, ProjectResponse } from '../../models';
       @if (showShareDialog) {
         <div class="dialog-overlay" (click)="showShareDialog = false">
           <div class="dialog" (click)="$event.stopPropagation()">
-            <h4>Invitar miembros</h4>
-            <input
-              #emailInput
-              type="email"
-              placeholder="Email del usuario"
-              class="input"
-              (keyup.enter)="inviteMember(emailInput.value); emailInput.value = ''"
-            />
-            <button
-              class="btn-primary"
-              [disabled]="inviting"
-              (click)="inviteMember(emailInput.value); emailInput.value = ''"
-            >
-              {{ inviting ? '...' : 'Invitar' }}
-            </button>
-            @if (inviteMessage) {
-              <p class="invite-msg">{{ inviteMessage }}</p>
+            <div class="dialog-tabs">
+              <button [class.active]="shareTab === 'email'" (click)="shareTab = 'email'">Por email</button>
+              <button [class.active]="shareTab === 'link'" (click)="shareTab = 'link'">Link de invitación</button>
+              <button [class.active]="shareTab === 'members'" (click)="shareTab = 'members'">Miembros</button>
+            </div>
+
+            <!-- Tab: Invitar por email -->
+            @if (shareTab === 'email') {
+              <h4>Invitar por email</h4>
+              <input
+                #emailInput
+                type="email"
+                placeholder="Email del usuario"
+                class="input"
+                (keyup.enter)="inviteMember(emailInput.value); emailInput.value = ''"
+              />
+              <button
+                class="btn-primary"
+                [disabled]="inviting"
+                (click)="inviteMember(emailInput.value); emailInput.value = ''"
+              >
+                {{ inviting ? '...' : 'Invitar' }}
+              </button>
+              @if (inviteMessage) {
+                <p class="invite-msg">{{ inviteMessage }}</p>
+              }
             }
-            @if (project?.members && project!.members.length > 0) {
-              <div class="member-list">
-                <h5>Miembros ({{ project!.members.length }})</h5>
-                @for (m of project!.members; track m.userId) {
-                  <div class="member-item">
-                    <span>{{ m.displayName }}</span>
-                    <span class="member-role">{{ m.role }}</span>
-                  </div>
+
+            <!-- Tab: Link de invitación -->
+            @if (shareTab === 'link') {
+              <h4>Link de invitación</h4>
+              <p class="help-text">Generá un link para compartir con cualquier persona. Al aceptarlo se unirá al proyecto automáticamente.</p>
+
+              <div class="link-options">
+                <label class="checkbox-label">
+                  <input type="checkbox" [(ngModel)]="inviteLinkRestrictEmail" [disabled]="generatingLink" />
+                  Restringir a un email específico
+                </label>
+                @if (inviteLinkRestrictEmail) {
+                  <input
+                    type="email"
+                    [(ngModel)]="inviteLinkEmail"
+                    placeholder="Email (solo este podrá aceptar)"
+                    class="input"
+                  />
                 }
+                <div class="expires-row">
+                  <label>Vence en:</label>
+                  <select [(ngModel)]="inviteLinkExpiresDays" [disabled]="generatingLink">
+                    <option [value]="1">1 día</option>
+                    <option [value]="3">3 días</option>
+                    <option [value]="7">7 días</option>
+                    <option [value]="14">14 días</option>
+                    <option [value]="30">30 días</option>
+                  </select>
+                </div>
               </div>
+
+              <button class="btn-primary" [disabled]="generatingLink" (click)="generateInvitationLink()">
+                {{ generatingLink ? 'Generando...' : '🔗 Generar link' }}
+              </button>
+
+              @if (invitationLinkError) {
+                <p class="error-text">{{ invitationLinkError }}</p>
+              }
+
+              @if (invitations.length > 0) {
+                <div class="invitation-list">
+                  <h5>Links activos ({{ invitations.length }})</h5>
+                  @for (inv of invitations; track inv.id) {
+                    <div class="invitation-item">
+                      <div class="invitation-info">
+                        <span class="invitation-link-text">{{ inv.invitationLink }}</span>
+                        <span class="invitation-meta">
+                          @if (inv.invitedEmail) {
+                            <span>📧 {{ inv.invitedEmail }}</span>
+                          }
+                          <span>⏳ Vence {{ inv.expiresAt | date:'short' }}</span>
+                        </span>
+                      </div>
+                      <div class="invitation-actions">
+                        <button class="btn-sm btn-copy" (click)="copyToClipboard(inv.invitationLink)" title="Copiar link">
+                          📋
+                        </button>
+                        @if (!inv.isAccepted) {
+                          <button class="btn-sm btn-revoke" (click)="revokeInvitation(inv.id)" title="Revocar">
+                            🗑️
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
             }
+
+            <!-- Tab: Miembros -->
+            @if (shareTab === 'members') {
+              <h4>Miembros ({{ project?.members?.length || 0 }})</h4>
+              @if (project?.members && project!.members.length > 0) {
+                <div class="member-list">
+                  @for (m of project!.members; track m.userId) {
+                    <div class="member-item">
+                      <div class="member-info">
+                        <span class="member-name">{{ m.displayName }}</span>
+                        <span class="member-email">{{ m.email }}</span>
+                      </div>
+                      <span class="member-role-badge">{{ m.role }}</span>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="help-text">No hay miembros aún.</p>
+              }
+            }
+
             <button class="btn-secondary" (click)="showShareDialog = false">
               Cerrar
             </button>
@@ -207,7 +295,7 @@ import { NoteResponse, ProjectResponse } from '../../models';
         max-width: 400px;
         box-shadow: 0 20px 60px rgba(0,0,0,0.3);
       }
-      .dialog h4 { margin: 0 0 12px; }
+      .dialog h4 { margin: 0 0 12px; font-size: 15px; }
       .dialog h5 { margin: 16px 0 8px; font-size: 13px; color: #666; }
       .input {
         width: 100%;
@@ -219,16 +307,129 @@ import { NoteResponse, ProjectResponse } from '../../models';
         box-sizing: border-box;
       }
       .input:focus { outline: none; border-color: #667eea; }
+      .help-text { font-size: 12px; color: #888; margin: 0 0 12px; }
+      .error-text { font-size: 13px; color: #e53e3e; margin: 4px 0; }
       .invite-msg { font-size: 13px; color: #667eea; margin: 4px 0; }
       .member-list { margin-top: 12px; }
       .member-item {
         display: flex;
         justify-content: space-between;
-        padding: 6px 0;
+        align-items: center;
+        padding: 8px 0;
         font-size: 13px;
         border-bottom: 1px solid #f0f0f0;
       }
-      .member-role { color: #999; font-size: 11px; text-transform: capitalize; }
+      .member-info { display: flex; flex-direction: column; }
+      .member-name { font-weight: 500; color: #333; }
+      .member-email { font-size: 11px; color: #999; }
+      .member-role-badge {
+        font-size: 10px;
+        background: #edf2f7;
+        padding: 2px 8px;
+        border-radius: 10px;
+        color: #666;
+        text-transform: capitalize;
+      }
+      .dialog-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 16px;
+        background: #f1f5f9;
+        border-radius: 10px;
+        padding: 3px;
+      }
+      .dialog-tabs button {
+        flex: 1;
+        padding: 8px 12px;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        color: #64748b;
+        transition: all .2s;
+      }
+      .dialog-tabs button.active {
+        background: white;
+        color: #334155;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      .link-options {
+        margin: 12px 0;
+        padding: 12px;
+        background: #f8fafc;
+        border-radius: 10px;
+      }
+      .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #555;
+        margin-bottom: 8px;
+        cursor: pointer;
+      }
+      .checkbox-label input[type="checkbox"] { cursor: pointer; }
+      .expires-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .expires-row label { font-size: 12px; color: #555; }
+      .expires-row select {
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 12px;
+        background: white;
+      }
+      .invitation-list { margin-top: 16px; }
+      .invitation-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f0f0f0;
+        gap: 8px;
+      }
+      .invitation-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        flex: 1;
+        min-width: 0;
+      }
+      .invitation-link-text {
+        font-size: 11px;
+        color: #667eea;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .invitation-meta {
+        display: flex;
+        gap: 8px;
+        font-size: 10px;
+        color: #999;
+      }
+      .invitation-actions {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+      .btn-sm {
+        padding: 4px 8px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        background: #f1f5f9;
+        transition: background .2s;
+      }
+      .btn-sm:hover { background: #e2e8f0; }
+      .btn-revoke:hover { background: #fee2e2; }
     `,
   ],
 })
@@ -241,6 +442,15 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
   inviteMessage = '';
   addingNote = false;
   inviting = false;
+
+  // Invitation link state
+  shareTab: 'email' | 'link' | 'members' = 'email';
+  invitations: InvitationResponse[] = [];
+  generatingLink = false;
+  invitationLinkError = '';
+  inviteLinkRestrictEmail = false;
+  inviteLinkEmail = '';
+  inviteLinkExpiresDays = 7;
 
   // Drag / resize state
   private dragging: { noteId: string; startX: number; startY: number; origX: number; origY: number } | null = null;
@@ -508,7 +718,15 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     };
   }
 
-  // ── Share ──
+  // ── Share / Invitations ──
+
+  openShareDialog(): void {
+    this.showShareDialog = true;
+    this.shareTab = 'email';
+    this.inviteMessage = '';
+    this.invitationLinkError = '';
+    this.loadInvitations();
+  }
 
   inviteMember(email: string): void {
     if (!email.trim() || this.inviting) return;
@@ -523,6 +741,48 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
         this.inviteMessage = '❌ No se pudo agregar. ¿El usuario existe?';
         this.inviting = false;
       },
+    });
+  }
+
+  generateInvitationLink(): void {
+    if (this.generatingLink) return;
+    this.generatingLink = true;
+    this.invitationLinkError = '';
+
+    const req: any = { expiresInDays: this.inviteLinkExpiresDays };
+    if (this.inviteLinkRestrictEmail && this.inviteLinkEmail.trim()) {
+      req.invitedEmail = this.inviteLinkEmail.trim();
+    }
+
+    this.api.createInvitation(this.projectId, req).subscribe({
+      next: (inv) => {
+        this.invitations.unshift(inv);
+        this.generatingLink = false;
+      },
+      error: () => {
+        this.invitationLinkError = 'Error al generar el link de invitación.';
+        this.generatingLink = false;
+      },
+    });
+  }
+
+  revokeInvitation(invitationId: string): void {
+    this.api.revokeInvitation(this.projectId, invitationId).subscribe({
+      next: () => {
+        this.invitations = this.invitations.filter((i) => i.id !== invitationId);
+      },
+    });
+  }
+
+  loadInvitations(): void {
+    this.api.getProjectInvitations(this.projectId).subscribe({
+      next: (list) => (this.invitations = list),
+    });
+  }
+
+  copyToClipboard(text: string): void {
+    navigator.clipboard.writeText(text).then(() => {
+      // Opcional: mostrar tooltip o feedback
     });
   }
 

@@ -107,6 +107,10 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Content="👥 Invitar"
+                            Style="{StaticResource AddNoteButtonStyle}"
+                            Click="InviteButton_Click"
+                            Margin="0,0,8,0"/>
                     <Button Content="＋ Nueva nota"
                             Style="{StaticResource AddNoteButtonStyle}"
                             Click="AddNote_Click"/>
@@ -119,5 +123,148 @@
                 ClipToBounds="True"
                 MouseLeftButtonDown="Canvas_MouseDown"
                 Background="{StaticResource BgGradientWarm}"/>
+
+        <!-- Invitation dialog overlay -->
+        <Border Grid.RowSpan="2" x:Name="InvitationOverlay"
+                Background="#60000000"
+                Visibility="Collapsed"
+                Panel.ZIndex="100">
+            <Border Width="500" Height="Auto" Padding="28"
+                    Background="White" CornerRadius="14"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Effect="{StaticResource ShadowXl}">
+                <StackPanel>
+                    <TextBlock Text="Invitar miembros" FontSize="20"
+                               FontWeight="SemiBold" Margin="0,0,0,4"
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="Compartí el link o invitá por email"
+                               FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,16"/>
+
+                    <!-- Tabs -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Button x:Name="EmailTabBtn" Content="Por email"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Click="ShowEmailTab_Click" Margin="0,0,6,0"/>
+                        <Button x:Name="LinkTabBtn" Content="Link de invitación"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Click="ShowLinkTab_Click"/>
+                    </StackPanel>
+
+                    <!-- Tab: Invitar por email -->
+                    <StackPanel x:Name="EmailTabPanel" Visibility="Visible">
+                        <TextBlock Text="Email del usuario" FontSize="12"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Margin="0,0,0,4"/>
+                        <Border BorderBrush="{StaticResource BorderLightBrush}"
+                                BorderThickness="1" CornerRadius="8" Margin="0,0,0,10">
+                            <TextBox x:Name="InviteEmailInput"
+                                     FontSize="14" Padding="12,10"
+                                     BorderThickness="0"/>
+                        </Border>
+                        <Button Content="Invitar"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Click="InviteByEmail_Click"/>
+                        <TextBlock x:Name="InviteEmailMessage"
+                                   FontSize="12" Foreground="{StaticResource BrandBlueBrush}"
+                                   Margin="0,6,0,0"/>
+                    </StackPanel>
+
+                    <!-- Tab: Link de invitación -->
+                    <StackPanel x:Name="LinkTabPanel" Visibility="Collapsed">
+                        <TextBlock Text="Generá un link para compartir con cualquier persona."
+                                   FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                        <!-- Opciones del link -->
+                        <Border Background="#F8FAFC" CornerRadius="10" Padding="12" Margin="0,0,0,12">
+                            <StackPanel>
+                                <CheckBox x:Name="RestrictEmailCheck"
+                                          Content="Restringir a un email específico"
+                                          FontSize="12"
+                                          Checked="RestrictEmail_Checked"
+                                          Unchecked="RestrictEmail_Unchecked"/>
+                                <Border x:Name="RestrictEmailPanel" Visibility="Collapsed"
+                                        BorderBrush="{StaticResource BorderLightBrush}"
+                                        BorderThickness="1" CornerRadius="8" Margin="0,8,0,0">
+                                    <TextBox x:Name="InviteLinkEmailInput"
+                                             FontSize="13" Padding="10,8"
+                                             BorderThickness="0"/>
+                                </Border>
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <TextBlock Text="Vence en:" FontSize="12"
+                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <ComboBox x:Name="ExpiresDaysCombo"
+                                              FontSize="12" Width="120">
+                                        <ComboBoxItem Content="1 día" Tag="1"/>
+                                        <ComboBoxItem Content="3 días" Tag="3" IsSelected="True"/>
+                                        <ComboBoxItem Content="7 días" Tag="7"/>
+                                        <ComboBoxItem Content="14 días" Tag="14"/>
+                                        <ComboBoxItem Content="30 días" Tag="30"/>
+                                    </ComboBox>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Button x:Name="GenerateLinkBtn"
+                                Content="🔗 Generar link"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Click="GenerateInvitationLink_Click"/>
+                        <TextBlock x:Name="InvitationLinkError"
+                                   FontSize="12" Foreground="#DC2626"
+                                   Margin="0,6,0,0"/>
+
+                        <!-- Lista de links activos -->
+                        <StackPanel x:Name="ActiveLinksPanel" Visibility="Collapsed" Margin="0,16,0,0">
+                            <TextBlock x:Name="ActiveLinksTitle"
+                                       FontSize="13" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       Margin="0,0,0,8"/>
+                            <ScrollViewer MaxHeight="200">
+                                <ItemsControl x:Name="ActiveLinksList">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="{StaticResource BorderLightBrush}"
+                                                    BorderThickness="0,0,0,1" Padding="0,8">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock Text="{Binding InvitationLink}"
+                                                                   FontSize="11" Foreground="{StaticResource BrandBlueBrush}"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                            <TextBlock Text="{Binding InvitedEmail, StringFormat='📧 {0}'}"
+                                                                       FontSize="10" Foreground="{StaticResource TextMutedBrush}"
+                                                                       Margin="0,0,8,0"/>
+                                                            <TextBlock Text="{Binding ExpiresAt, StringFormat='⏳ Vence {0:g}'}"
+                                                                       FontSize="10" Foreground="{StaticResource TextMutedBrush}"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                        <Button Content="📋" FontSize="14"
+                                                                BorderThickness="0" Background="Transparent"
+                                                                Cursor="Hand" Margin="0,0,4,0"
+                                                                Click="CopyLink_Click"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Close button -->
+                    <Button Content="Cerrar"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Click="CloseInvitationDialog_Click"
+                            Margin="0,16,0,0"/>
+                </StackPanel>
+            </Border>
+        </Border>
     </Grid>
 </UserControl>
