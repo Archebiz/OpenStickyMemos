@@ -211,11 +211,21 @@ public class StickyBoardViewModel : BaseViewModel
         _navigation.GoBack();
     }
 
-    // ── Invitaciones ──
+    // ── Miembros e Invitaciones ──
+
+    public async Task<ProjectResponse?> GetProjectAsync()
+    {
+        return await _api.GetProjectAsync(_projectId);
+    }
 
     public async Task<MemberInfo?> AddMemberAsync(string email)
     {
         return await _api.AddMemberAsync(_projectId, email);
+    }
+
+    public async Task<bool> RemoveMemberAsync(string memberUserId)
+    {
+        return await _api.RemoveMemberAsync(_projectId, memberUserId);
     }
 
     public async Task<InvitationResponse?> CreateInvitationAsync(object request)
@@ -232,6 +242,11 @@ public class StickyBoardViewModel : BaseViewModel
         foreach (var inv in list)
             FixInvitationLink(inv);
         return list;
+    }
+
+    public async Task<bool> RevokeInvitationAsync(string invitationId)
+    {
+        return await _api.RevokeInvitationAsync(_projectId, invitationId);
     }
 
     /// <summary>

@@ -148,7 +148,12 @@ import { NoteResponse, ProjectResponse, InvitationResponse } from '../../models'
                         <span class="member-name">{{ m.displayName }}</span>
                         <span class="member-email">{{ m.email }}</span>
                       </div>
-                      <span class="member-role-badge">{{ m.role }}</span>
+                      <div class="member-actions">
+                        <span class="member-role-badge">{{ m.role }}</span>
+                        @if (project.ownerId === userId && m.userId !== project.ownerId) {
+                          <button class="btn-remove" (click)="removeMember(m.userId, m.displayName)" title="Remover miembro">✕</button>
+                        }
+                      </div>
                     </div>
                   }
                 </div>
@@ -322,6 +327,11 @@ import { NoteResponse, ProjectResponse, InvitationResponse } from '../../models'
       .member-info { display: flex; flex-direction: column; }
       .member-name { font-weight: 500; color: #333; }
       .member-email { font-size: 11px; color: #999; }
+      .member-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
       .member-role-badge {
         font-size: 10px;
         background: #edf2f7;
@@ -329,6 +339,20 @@ import { NoteResponse, ProjectResponse, InvitationResponse } from '../../models'
         border-radius: 10px;
         color: #666;
         text-transform: capitalize;
+      }
+      .btn-remove {
+        padding: 2px 6px;
+        border: none;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        background: transparent;
+        color: #999;
+        transition: all .2s;
+      }
+      .btn-remove:hover {
+        background: #fee2e2;
+        color: #dc2626;
       }
       .dialog-tabs {
         display: flex;
@@ -780,6 +804,18 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
       next: (list) => {
         list.forEach((inv) => this.fixInvitationLink(inv));
         this.invitations = list;
+      },
+    });
+  }
+
+  removeMember(userId: string, displayName: string): void {
+    if (!confirm(`¿Estás seguro de eliminar a ${displayName} del proyecto?`)) return;
+
+    this.api.removeMember(this.projectId, userId).subscribe({
+      next: () => {
+        if (this.project) {
+          this.project.members = this.project.members.filter((m) => m.userId !== userId);
+        }
       },
     });
   }

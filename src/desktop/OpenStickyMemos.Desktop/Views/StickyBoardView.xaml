@@ -212,7 +212,10 @@
                                 Click="ShowEmailTab_Click" Margin="0,0,6,0"/>
                         <Button x:Name="LinkTabBtn" Content="Link de invitación"
                                 Style="{StaticResource SecondaryButtonStyle}"
-                                Click="ShowLinkTab_Click"/>
+                                Click="ShowLinkTab_Click" Margin="0,0,6,0"/>
+                        <Button x:Name="MembersTabBtn" Content="Miembros"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Click="ShowMembersTab_Click"/>
                     </StackPanel>
 
                     <!-- Tab: Invitar por email -->
@@ -312,6 +315,10 @@
                                                                 BorderThickness="0" Background="Transparent"
                                                                 Cursor="Hand" Margin="0,0,4,0"
                                                                 Click="CopyLink_Click"/>
+                                                        <Button Content="🗑️" FontSize="14"
+                                                                BorderThickness="0" Background="Transparent"
+                                                                Cursor="Hand"
+                                                                Click="RevokeInvitation_Click"/>
                                                     </StackPanel>
                                                 </Grid>
                                             </Border>
@@ -320,6 +327,49 @@
                                 </ItemsControl>
                             </ScrollViewer>
                         </StackPanel>
+                    </StackPanel>
+
+                    <!-- Tab: Miembros -->
+                    <StackPanel x:Name="MembersTabPanel" Visibility="Collapsed">
+                        <TextBlock x:Name="MembersTitle"
+                                   FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Margin="0,0,0,8"/>
+                        <ScrollViewer MaxHeight="250">
+                            <ItemsControl x:Name="MembersList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{StaticResource BorderLightBrush}"
+                                                BorderThickness="0,0,0,1" Padding="8,6">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               FontSize="13" FontWeight="SemiBold"
+                                                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="{Binding Email}"
+                                                               FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                    <Border Background="#EDF2F7" CornerRadius="10"
+                                                            Padding="8,2,8,2" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Role}"
+                                                                   FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    </Border>
+                                                    <Button Content="✕" FontSize="14"
+                                                            BorderThickness="0" Background="Transparent"
+                                                            Cursor="Hand" Margin="8,0,0,0"
+                                                            Click="RemoveMember_Click"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
                     </StackPanel>
 
                     <!-- Close button -->

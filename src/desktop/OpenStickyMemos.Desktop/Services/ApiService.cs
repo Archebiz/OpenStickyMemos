@@ -93,6 +93,7 @@ public interface IApiService
     Task<ProjectResponse?> UpdateProjectAsync(string id, string name, string? description);
     Task<bool> DeleteProjectAsync(string id);
     Task<MemberInfo?> AddMemberAsync(string projectId, string email);
+    Task<bool> RemoveMemberAsync(string projectId, string memberUserId);
     Task<List<NoteResponse>> GetNotesAsync(string projectId);
     Task<NoteResponse?> CreateNoteAsync(string projectId, object request);
     Task<NoteResponse?> UpdateNoteAsync(string projectId, string noteId, object request);
@@ -280,6 +281,11 @@ public class ApiService : IApiService
     {
         return await PostAsync<MemberInfo>(
             $"/api/Projects/{projectId}/members", new { email });
+    }
+
+    public async Task<bool> RemoveMemberAsync(string projectId, string memberUserId)
+    {
+        return await DeleteAsync($"/api/Projects/{projectId}/members/{memberUserId}");
     }
 
     // ── Notes ──

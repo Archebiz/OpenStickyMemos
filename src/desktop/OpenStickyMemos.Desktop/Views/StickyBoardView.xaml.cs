@@ -433,4 +433,88 @@ public partial class StickyBoardView : UserControl
     {
         InvitationOverlay.Visibility = Visibility.Collapsed;
     }
+
+    // ── Members Tab ──
+
+    private string? _projectOwnerId;
+    private List<MemberInfo> _projectMembers = new();
+
+    private void ShowMembersTab_Click(object sender, RoutedEventArgs e)
+    {
+        EmailTabPanel.Visibility = Visibility.Collapsed;
+        LinkTabPanel.Visibility = Visibility.Collapsed;
+        MembersTabPanel.Visibility = Visibility.Visible;
+        MembersTabBtn.Background = (System.Windows.Media.Brush)FindResource("BrandBlueBrush");
+        MembersTabBtn.Foreground = System.Windows.Media.Brushes.White;
+        EmailTabBtn.Background = System.Windows.Media.Brushes.Transparent;
+        EmailTabBtn.Foreground = System.Windows.Media.Brushes.Black;
+        LinkTabBtn.Background = System.Windows.Media.Brushes.Transparent;
+        LinkTabBtn.Foreground = System.Windows.Media.Brushes.Black;
+
+        _ = LoadMembersAsync();
+    }
+
+    private async Task LoadMembersAsync()
+    {
+        var project = await _vm.GetProjectAsync();
+        if (project is null) return;
+
+        _projectOwnerId = project.OwnerId;
+        _projectMembers = project.Members;
+
+        MembersTitle.Text = $"Miembros ({project.Members.Count})";
+        MembersList.ItemsSource = null;
+        MembersList.ItemsSource = project.Members;
+    }
+
+    private async void RemoveMember_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button btn && btn.DataContext is MemberInfo member)
+        {
+            // No permitir remover al owner
+            if (member.UserId == _projectOwnerId)
+            {
+                MessageBox.Show("No puedes remover al propietario del proyecto.", "Acción no permitida",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"¿Estás seguro de eliminar a {member.DisplayName} del proyecto?",
+                "Remover miembro",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                var removed = await _vm.RemoveMemberAsync(member.UserId);
+                if (removed)
+                {
+                    _projectMembers.Remove(member);
+                    MembersTitle.Text = $"Miembros ({_projectMembers.Count})";
+                    MembersList.ItemsSource = null;
+                    MembersList.ItemsSource = _projectMembers;
+                }
+            }
+        }
+    }
+
+    // ── Revoke Invitation Link ──
+
+    private async void RevokeInvitation_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button btn && btn.DataContext is InvitationResponse inv)
+        {
+            var result = MessageBox.Show(
+                "¿Estás seguro de revocar este link de invitación?",
+                "Revocar invitación",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _activeInvitations.Remove(inv);
+                RefreshActiveLinksList();
+                await _vm.RevokeInvitationAsync(inv.Id);
+            }
+        }
+    }
 }
