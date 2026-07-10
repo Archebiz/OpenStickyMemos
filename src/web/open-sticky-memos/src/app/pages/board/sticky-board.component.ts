@@ -3,6 +3,7 @@ import {
   OnInit,
   OnDestroy,
   HostListener,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -11,12 +12,13 @@ import { Subject, debounceTime } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { SignalRService } from '../../core/signalr.service';
 import { NoteCardComponent, NoteCardData } from './note-card.component';
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog.component';
 import { NoteResponse, ProjectResponse, InvitationResponse } from '../../models';
 
 @Component({
   selector: 'app-sticky-board',
   standalone: true,
-  imports: [CommonModule, FormsModule, NoteCardComponent],
+  imports: [CommonModule, FormsModule, NoteCardComponent, ConfirmDialogComponent],
   template: `
     <div class="board-container">
       <!-- Top bar -->
@@ -195,6 +197,8 @@ import { NoteResponse, ProjectResponse, InvitationResponse } from '../../models'
           </div>
         }
       </div>
+      <!-- Confirm dialog -->
+      <app-confirm-dialog #confirmDialog></app-confirm-dialog>
     </div>
   `,
   styles: [
@@ -480,6 +484,8 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
   private dragging: { noteId: string; startX: number; startY: number; origX: number; origY: number } | null = null;
   private resizing: { noteId: string; startX: number; startY: number; origW: number; origH: number } | null = null;
   private touchMoveHandler: ((e: TouchEvent) => void) | null = null;
+
+  @ViewChild('confirmDialog') confirmDialog!: ConfirmDialogComponent;
 
   // Debounce for auto-save
   private saveSubject = new Subject<{ noteId: string; changes: Partial<NoteCardData> }>();
@@ -809,15 +815,19 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
   }
 
   removeMember(userId: string, displayName: string): void {
-    if (!confirm(`¿Estás seguro de eliminar a ${displayName} del proyecto?`)) return;
-
-    this.api.removeMember(this.projectId, userId).subscribe({
-      next: () => {
-        if (this.project) {
-          this.project.members = this.project.members.filter((m) => m.userId !== userId);
-        }
-      },
-    });
+    this.confirmDialog.open(
+      'Remover miembro',
+      `¿Estás seguro de eliminar a ${displayName} del proyecto?`,
+      () => {
+        this.api.removeMember(this.projectId, userId).subscribe({
+          next: () => {
+            if (this.project) {
+              this.project.members = this.project.members.filter((m) => m.userId !== userId);
+            }
+          },
+        });
+      }
+    );
   }
 
   copyToClipboard(text: string): void {
