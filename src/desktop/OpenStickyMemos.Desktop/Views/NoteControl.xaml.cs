@@ -107,13 +107,16 @@ public partial class NoteControl : UserControl
         ApplyPinStyle(IsPinned);
         SyncAuthorInfo();
 
-        // Fade-in animation on load
-        this.Opacity = 0;
+        // Sutil fade-in desde opacidad alta para evitar intermediate render target
+        // que causa ghosting al arrastrar notas nuevas (Opacity<1 + DropShadowEffect
+        // obliga a WPF a crear un buffer intermedio que no se actualiza sincronizadamente
+        // al cambiar Canvas.Left/Top durante el arrastre).
+        this.Opacity = 0.92;
         var fadeIn = new System.Windows.Media.Animation.DoubleAnimation
         {
-            From = 0,
+            From = 0.92,
             To = 1,
-            Duration = TimeSpan.FromMilliseconds(300),
+            Duration = TimeSpan.FromMilliseconds(200),
             EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
         };
         this.BeginAnimation(OpacityProperty, fadeIn);
