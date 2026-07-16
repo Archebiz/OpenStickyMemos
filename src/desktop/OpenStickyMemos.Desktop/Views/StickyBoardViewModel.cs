@@ -121,8 +121,31 @@ public class StickyBoardViewModel : BaseViewModel
         if (note is null) return null;
 
         var item = MapToItem(note);
-        _notes[item.Id] = item;
-        NoteAdded?.Invoke(item);
+
+        // Evitar duplicado por race condition: si SignalR NoteCreated llegó antes
+        // que la respuesta HTTP, la nota ya fue agregada al canvas. En ese caso
+        // solo actualizamos los datos sin disparar NoteAdded (evita ghost note).
+        if (_notes.ContainsKey(item.Id))
+        {
+            var existing = _notes[item.Id];
+            existing.Title = item.Title;
+            existing.Content = item.Content;
+            existing.Color = item.Color;
+            existing.PositionX = item.PositionX;
+            existing.PositionY = item.PositionY;
+            existing.Width = item.Width;
+            existing.Height = item.Height;
+            existing.IsPinned = item.IsPinned;
+            existing.ZIndex = item.ZIndex;
+            existing.AuthorName = item.AuthorName;
+            NoteUpdated?.Invoke(existing);
+        }
+        else
+        {
+            _notes[item.Id] = item;
+            NoteAdded?.Invoke(item);
+        }
+
         return item;
     }
 

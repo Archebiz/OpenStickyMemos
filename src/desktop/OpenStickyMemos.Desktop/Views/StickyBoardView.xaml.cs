@@ -51,6 +51,16 @@ public partial class StickyBoardView : UserControl
     {
         Dispatcher.Invoke(() =>
         {
+            // Safety: eliminar cualquier NoteControl existente con el mismo Id
+            // para prevenir duplicados por race conditions (SignalR vs HTTP)
+            for (int i = NotesCanvas.Children.Count - 1; i >= 0; i--)
+            {
+                if (NotesCanvas.Children[i] is NoteControl existing && existing.NoteId == note.Id)
+                {
+                    NotesCanvas.Children.RemoveAt(i);
+                }
+            }
+
             var ctrl = CreateNoteControl(note);
             Canvas.SetLeft(ctrl, note.PositionX);
             Canvas.SetTop(ctrl, note.PositionY);
