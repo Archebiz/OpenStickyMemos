@@ -20,8 +20,31 @@ export interface NoteEvent {
   height: number;
   isPinned: boolean;
   zIndex: number;
+  isArchived: boolean;
+  pendingArchive: boolean;
+  pendingDelete: boolean;
+  isOwner: boolean;
+  isTaskList: boolean;
+  tags: string | null;
+  reminderAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface NoteActionRequestEvent {
+  id: string;
+  noteId: string;
+  projectId: string;
+  type: string;
+  status: string;
+  requesterId: string;
+  requesterName: string;
+  requesterAvatar: string | null;
+  noteTitle: string;
+  noteColor: string;
+  createdAt: string;
+  decidedAt: string | null;
+  decidedById: string | null;
 }
 
 export interface NoteDeletedEvent {
@@ -48,12 +71,16 @@ export class SignalRService implements OnDestroy {
   private noteUpdatedSubject = new Subject<NoteEvent>();
   private noteDeletedSubject = new Subject<NoteDeletedEvent>();
   private memberAddedSubject = new Subject<MemberEvent>();
+  private actionRequestCreatedSubject = new Subject<NoteActionRequestEvent>();
+  private actionRequestResolvedSubject = new Subject<NoteActionRequestEvent>();
   private connectionStateSubject = new BehaviorSubject<boolean>(false);
 
   noteCreated$: Observable<NoteEvent> = this.noteCreatedSubject.asObservable();
   noteUpdated$: Observable<NoteEvent> = this.noteUpdatedSubject.asObservable();
   noteDeleted$: Observable<NoteDeletedEvent> = this.noteDeletedSubject.asObservable();
   memberAdded$: Observable<MemberEvent> = this.memberAddedSubject.asObservable();
+  actionRequestCreated$: Observable<NoteActionRequestEvent> = this.actionRequestCreatedSubject.asObservable();
+  actionRequestResolved$: Observable<NoteActionRequestEvent> = this.actionRequestResolvedSubject.asObservable();
   connectionState$: Observable<boolean> = this.connectionStateSubject.asObservable();
 
   constructor(
@@ -134,6 +161,8 @@ export class SignalRService implements OnDestroy {
     this.noteUpdatedSubject.complete();
     this.noteDeletedSubject.complete();
     this.memberAddedSubject.complete();
+    this.actionRequestCreatedSubject.complete();
+    this.actionRequestResolvedSubject.complete();
     this.connectionStateSubject.complete();
   }
 
@@ -150,6 +179,14 @@ export class SignalRService implements OnDestroy {
 
     this.hubConnection?.on('NoteDeleted', (data: NoteDeletedEvent) => {
       this.ngZone.run(() => this.noteDeletedSubject.next(data));
+    });
+
+    this.hubConnection?.on('ActionRequestCreated', (request: NoteActionRequestEvent) => {
+      this.ngZone.run(() => this.actionRequestCreatedSubject.next(request));
+    });
+
+    this.hubConnection?.on('ActionRequestResolved', (request: NoteActionRequestEvent) => {
+      this.ngZone.run(() => this.actionRequestResolvedSubject.next(request));
     });
 
     this.hubConnection?.on('MemberAdded', (member: MemberEvent) => {

@@ -171,6 +171,23 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button x:Name="RenameProjectButton" Content="✏️"
+                            Style="{StaticResource AddNoteButtonStyle}"
+                            ToolTip="Renombrar proyecto"
+                            Click="RenameProjectButton_Click"
+                            Visibility="Collapsed"
+                            Margin="0,0,8,0"/>
+                    <Button x:Name="ArchiveFilterButton" Content="🗄️"
+                            Style="{StaticResource AddNoteButtonStyle}"
+                            ToolTip="Ver notas archivadas"
+                            Click="ArchiveFilterButton_Click"
+                            Margin="0,0,8,0"/>
+                    <Button x:Name="ApprovalsButton" Content="⏳ 0"
+                            Style="{StaticResource AddNoteButtonStyle}"
+                            ToolTip="Solicitudes pendientes de aprobación"
+                            Click="ApprovalsButton_Click"
+                            Visibility="Collapsed"
+                            Margin="0,0,8,0"/>
                     <Button Content="👥 Invitar"
                             Style="{StaticResource AddNoteButtonStyle}"
                             Click="InviteButton_Click"
@@ -376,6 +393,134 @@
                     <Button Content="Cerrar"
                             Style="{StaticResource SecondaryButtonStyle}"
                             Click="CloseInvitationDialog_Click"
+                            Margin="0,16,0,0"/>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Sidebar para mover notas a otro proyecto (visible al arrastrar) -->
+        <Border Grid.RowSpan="2" x:Name="MoveSidebarOverlay"
+                HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                Width="260"
+                Background="#F4F7FB"
+                BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1,0,0,0"
+                Visibility="Collapsed"
+                Panel.ZIndex="90">
+            <StackPanel>
+                <TextBlock Text="📋 Mover nota a..." FontSize="15" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           Margin="16,16,16,4"/>
+                <TextBlock Text="Soltá la nota sobre un proyecto para moverla" FontSize="11"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           TextWrapping="Wrap" Margin="16,0,16,12"/>
+                <StackPanel x:Name="MoveProjectPanel"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Diálogo de renombrar proyecto -->
+        <Border Grid.RowSpan="2" x:Name="RenameOverlay"
+                Background="#60000000"
+                Visibility="Collapsed"
+                Panel.ZIndex="100">
+            <Border Width="400" Padding="24"
+                    Background="White" CornerRadius="14"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Effect="{StaticResource ShadowXl}">
+                <StackPanel>
+                    <TextBlock Text="Renombrar proyecto" FontSize="18" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+                    <TextBlock Text="Escribí el nuevo nombre del proyecto" FontSize="12"
+                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,16"/>
+                    <Border BorderBrush="{StaticResource BorderLightBrush}"
+                            BorderThickness="1" CornerRadius="8" Margin="0,0,0,16">
+                        <TextBox x:Name="RenameProjectInput"
+                                 FontSize="14" Padding="12,10"
+                                 BorderThickness="0"
+                                 KeyDown="RenameProjectInput_KeyDown"/>
+                    </Border>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="Cancelar"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Click="CloseRename_Click"/>
+                        <Button Grid.Column="2" Content="Guardar"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Click="SaveRename_Click"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Panel de solicitudes de aprobación (owner) -->
+        <Border Grid.RowSpan="2" x:Name="ApprovalsOverlay"
+                Background="#60000000"
+                Visibility="Collapsed"
+                Panel.ZIndex="100">
+            <Border Width="480" MaxHeight="540" Padding="24"
+                    Background="White" CornerRadius="14"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Effect="{StaticResource ShadowXl}">
+                <StackPanel>
+                    <TextBlock x:Name="ApprovalsTitle" Text="Solicitudes pendientes"
+                               FontSize="18" FontWeight="SemiBold" Margin="0,0,0,4"
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="Un miembro solicitó archivar o eliminar una nota. Aprobá o rechazá cada solicitud."
+                               FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"/>
+                    <ScrollViewer MaxHeight="300" Margin="0,12,0,0">
+                        <ItemsControl x:Name="ApprovalsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="#EEF1F5" BorderThickness="0,0,0,1" Padding="6,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19"
+                                                    Background="{Binding NoteColor}" Margin="0,0,10,0"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="📝" FontSize="17"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding NoteTitle}" FontSize="13" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock FontSize="11" Foreground="#7A8794">
+                                                    <Run Text="{Binding RequesterName}"/>
+                                                    <Run Text=" solicitó "/>
+                                                    <Run Text="{Binding TypeDisplay}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Content="✓" Width="30" Height="30" Margin="0,0,6,0"
+                                                        FontSize="14" FontWeight="Bold"
+                                                        Background="#22C55E" Foreground="White"
+                                                        BorderThickness="0" Cursor="Hand"
+                                                        ToolTip="Aprobar" Tag="{Binding Id}"
+                                                        Click="ApproveRequest_Click"/>
+                                                <Button Content="✕" Width="30" Height="30"
+                                                        FontSize="14" FontWeight="Bold"
+                                                        Background="#EF4444" Foreground="White"
+                                                        BorderThickness="0" Cursor="Hand"
+                                                        ToolTip="Rechazar" Tag="{Binding Id}"
+                                                        Click="RejectRequest_Click"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <Button Content="Cerrar"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Click="CloseApprovals_Click"
                             Margin="0,16,0,0"/>
                 </StackPanel>
             </Border>

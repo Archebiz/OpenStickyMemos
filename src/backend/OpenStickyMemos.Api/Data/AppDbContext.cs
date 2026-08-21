@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
     public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
     public DbSet<Note> Notes => Set<Note>();
+    public DbSet<NoteActionRequest> NoteActionRequests => Set<NoteActionRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -94,6 +95,32 @@ public class AppDbContext : DbContext
                   .WithMany(u => u.Notes)
                   .HasForeignKey(n => n.AuthorId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── NoteActionRequest ──
+        modelBuilder.Entity<NoteActionRequest>(entity =>
+        {
+            entity.HasIndex(r => new { r.ProjectId, r.Status });
+
+            entity.HasOne(r => r.Note)
+                  .WithMany()
+                  .HasForeignKey(r => r.NoteId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(r => r.Project)
+                  .WithMany()
+                  .HasForeignKey(r => r.ProjectId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(r => r.Requester)
+                  .WithMany()
+                  .HasForeignKey(r => r.RequesterId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(r => r.DecidedBy)
+                  .WithMany()
+                  .HasForeignKey(r => r.DecidedById)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

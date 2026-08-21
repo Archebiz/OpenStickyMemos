@@ -55,6 +55,13 @@ export interface NoteResponse {
   height: number;
   isPinned: boolean;
   zIndex: number;
+  isArchived: boolean;
+  pendingArchive: boolean;
+  pendingDelete: boolean;
+  isOwner: boolean;
+  isTaskList: boolean;
+  tags: string | null;
+  reminderAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -69,6 +76,9 @@ export interface CreateNoteRequest {
   height?: number;
   isPinned?: boolean;
   zIndex?: number;
+  isTaskList?: boolean;
+  tags?: string | null;
+  reminderAt?: string | null;
 }
 
 export interface UpdateNoteRequest {
@@ -81,11 +91,46 @@ export interface UpdateNoteRequest {
   height?: number | null;
   zIndex?: number | null;
   isPinned?: boolean | null;
+  isTaskList?: boolean | null;
+  tags?: string | null;
+  reminderAt?: string | null;
+  clearReminder?: boolean;
 }
 
 export interface UpdateNotePositionRequest {
   positionX: number;
   positionY: number;
+}
+
+// ── Notas: acciones (archivar / eliminar / mover / aprobaciones) ──
+
+export interface MoveNoteRequest {
+  targetProjectId: string;
+}
+
+export interface NoteActionResponse {
+  note?: NoteResponse | null;
+  performed: boolean;
+  requestCreated: boolean;
+  deleted: boolean;
+  requestId?: string | null;
+  message?: string;
+}
+
+export interface NoteActionRequestResponse {
+  id: string;
+  noteId: string;
+  projectId: string;
+  type: 'Archive' | 'Delete';
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
+  requesterId: string;
+  requesterName: string;
+  requesterAvatar: string | null;
+  noteTitle: string;
+  noteColor: string;
+  createdAt: string;
+  decidedAt: string | null;
+  decidedById: string | null;
 }
 
 // ── Invitaciones ──

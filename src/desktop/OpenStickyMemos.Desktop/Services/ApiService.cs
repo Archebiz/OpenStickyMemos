@@ -49,8 +49,46 @@ public class NoteResponse
     public double Height { get; set; }
     public bool IsPinned { get; set; }
     public int ZIndex { get; set; }
+    public bool IsArchived { get; set; }
+    public bool PendingArchive { get; set; }
+    public bool PendingDelete { get; set; }
+    public bool IsOwner { get; set; }
+    public bool IsTaskList { get; set; }
+    public string? Tags { get; set; }
+    public DateTime? ReminderAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>Resultado de archivar/eliminar una nota (ejecutado o solicitado a aprobación).</summary>
+public class NoteActionResponse
+{
+    public NoteResponse? Note { get; set; }
+    public bool Performed { get; set; }
+    public bool RequestCreated { get; set; }
+    public bool Deleted { get; set; }
+    public string? RequestId { get; set; }
+    public string Message { get; set; } = string.Empty;
+}
+
+/// <summary>Solicitud de un miembro para archivar/eliminar (pendiente de aprobación del owner).</summary>
+public class NoteActionRequestResponse
+{
+    public string Id { get; set; } = string.Empty;
+    public string NoteId { get; set; } = string.Empty;
+    public string ProjectId { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty; // "Archive" | "Delete"
+    public string Status { get; set; } = string.Empty;
+    public string RequesterId { get; set; } = string.Empty;
+    public string RequesterName { get; set; } = string.Empty;
+    public string? RequesterAvatar { get; set; }
+    public string NoteTitle { get; set; } = string.Empty;
+    public string NoteColor { get; set; } = "#FFE066";
+    public DateTime CreatedAt { get; set; }
+    public DateTime? DecidedAt { get; set; }
+    public string? DecidedById { get; set; }
+
+    public string TypeDisplay => Type == "Delete" ? "eliminar" : "archivar";
 }
 
 // ── Invitaciones ──
@@ -94,10 +132,16 @@ public interface IApiService
     Task<bool> DeleteProjectAsync(string id);
     Task<MemberInfo?> AddMemberAsync(string projectId, string email);
     Task<bool> RemoveMemberAsync(string projectId, string memberUserId);
-    Task<List<NoteResponse>> GetNotesAsync(string projectId);
+    Task<List<NoteResponse>> GetNotesAsync(string projectId, bool includeArchived = false);
     Task<NoteResponse?> CreateNoteAsync(string projectId, object request);
     Task<NoteResponse?> UpdateNoteAsync(string projectId, string noteId, object request);
-    Task<bool> DeleteNoteAsync(string projectId, string noteId);
+    Task<NoteActionResponse?> DeleteNoteAsync(string projectId, string noteId);
+    Task<NoteActionResponse?> ArchiveNoteAsync(string projectId, string noteId);
+    Task<NoteActionResponse?> UnarchiveNoteAsync(string projectId, string noteId);
+    Task<NoteResponse?> MoveNoteAsync(string sourceProjectId, string noteId, string targetProjectId);
+    Task<List<NoteActionRequestResponse>> GetActionRequestsAsync(string projectId);
+    Task<bool> ApproveActionRequestAsync(string projectId, string requestId);
+    Task<bool> RejectActionRequestAsync(string projectId, string requestId);
 
     // ── Invitaciones ──
     Task<InvitationResponse?> CreateInvitationAsync(string projectId, object request);
@@ -290,10 +334,12 @@ public class ApiService : IApiService
 
     // ── Notes ──
 
-    public async Task<List<NoteResponse>> GetNotesAsync(string projectId)
+    public async Task<List<NoteResponse>> GetNotesAsync(string projectId, bool includeArchived = false)
     {
-        return await GetAsync<List<NoteResponse>>(
-                   $"/api/Projects/{projectId}/notes")
+        var url = $"/api/Projects/{projectId}/notes";
+        if (includeArchived)
+            url += "?includeArchived=true";
+        return await GetAsync<List<NoteResponse>>(url)
                ?? new List<NoteResponse>();
     }
 
@@ -324,9 +370,111 @@ public class ApiService : IApiService
         }
     }
 
-    public async Task<bool> DeleteNoteAsync(string projectId, string noteId)
+    public async Task<NoteActionResponse?> DeleteNoteAsync(string projectId, string noteId)
     {
-        return await DeleteAsync($"/api/Projects/{projectId}/notes/{noteId}");
+        var url = $"/api/Projects/{projectId}/notes/{noteId}";
+        var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}{url}";
+        Log($"DELETE {fullUrl}");
+        try
+        {
+            var response = await _http.DeleteAsync(url);
+            var body = await response.Content.ReadAsStringAsync();
+            Log($"DELETE {fullUrl} → {(int)response.StatusCode} {body[..Math.Min(body.Length, 500)]}");
+
+            // 204: eliminada directamente (owner). 202: solicitud creada (miembro).
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                return new NoteActionResponse { Deleted = true, Performed = true, Message = "Nota eliminada" };
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Accepted && !string.IsNullOrEmpty(body))
+                return JsonSerializer.Deserialize<NoteActionResponse>(body, JsonOptions);
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            LogError($"DELETE {fullUrl}", ex);
+            return null;
+        }
+    }
+
+    public async Task<NoteActionResponse?> ArchiveNoteAsync(string projectId, string noteId)
+    {
+        return await PostAsync<NoteActionResponse>(
+            $"/api/Projects/{projectId}/notes/{noteId}/archive", new { });
+    }
+
+    public async Task<NoteActionResponse?> UnarchiveNoteAsync(string projectId, string noteId)
+    {
+        return await PostAsync<NoteActionResponse>(
+            $"/api/Projects/{projectId}/notes/{noteId}/unarchive", new { });
+    }
+
+    public async Task<NoteResponse?> MoveNoteAsync(string sourceProjectId, string noteId, string targetProjectId)
+    {
+        var url = $"/api/Projects/{sourceProjectId}/notes/{noteId}/move";
+        var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}{url}";
+        var json = JsonSerializer.Serialize(new { targetProjectId });
+        Log($"PATCH {fullUrl} {json}");
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Patch, url)
+            {
+                Content = JsonContent.Create(new { targetProjectId })
+            };
+            var response = await _http.SendAsync(request);
+            var respBody = await response.Content.ReadAsStringAsync();
+            Log($"PATCH {fullUrl} → {(int)response.StatusCode} {respBody[..Math.Min(respBody.Length, 500)]}");
+            if (!response.IsSuccessStatusCode) return null;
+            return JsonSerializer.Deserialize<NoteResponse>(respBody, JsonOptions);
+        }
+        catch (Exception ex)
+        {
+            LogError($"PATCH {fullUrl}", ex);
+            return null;
+        }
+    }
+
+    public async Task<List<NoteActionRequestResponse>> GetActionRequestsAsync(string projectId)
+    {
+        return await GetAsync<List<NoteActionRequestResponse>>(
+                   $"/api/Projects/{projectId}/notes/requests")
+               ?? new List<NoteActionRequestResponse>();
+    }
+
+    public async Task<bool> ApproveActionRequestAsync(string projectId, string requestId)
+    {
+        var url = $"/api/Projects/{projectId}/notes/requests/{requestId}/approve";
+        var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}{url}";
+        Log($"POST {fullUrl}");
+        try
+        {
+            var response = await _http.PostAsync(url, null);
+            Log($"POST {fullUrl} → {(int)response.StatusCode}");
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            LogError($"POST {fullUrl}", ex);
+            return false;
+        }
+    }
+
+    public async Task<bool> RejectActionRequestAsync(string projectId, string requestId)
+    {
+        var url = $"/api/Projects/{projectId}/notes/requests/{requestId}/reject";
+        var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}{url}";
+        Log($"POST {fullUrl}");
+        try
+        {
+            var response = await _http.PostAsync(url, null);
+            Log($"POST {fullUrl} → {(int)response.StatusCode}");
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            LogError($"POST {fullUrl}", ex);
+            return false;
+        }
     }
 
     // ── Invitaciones ──

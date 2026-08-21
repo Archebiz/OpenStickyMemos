@@ -13,7 +13,7 @@ import { ApiService } from '../../core/api.service';
 import { SignalRService } from '../../core/signalr.service';
 import { NoteCardComponent, NoteCardData } from './note-card.component';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog.component';
-import { NoteResponse, ProjectResponse, InvitationResponse } from '../../models';
+import { NoteResponse, ProjectResponse, InvitationResponse, NoteActionRequestResponse } from '../../models';
 
 @Component({
   selector: 'app-sticky-board',
@@ -29,10 +29,24 @@ import { NoteResponse, ProjectResponse, InvitationResponse } from '../../models'
         }
         <div class="header-actions">
           @if (project && project.ownerId === userId) {
+            <button class="btn-share" (click)="openRenameDialog()" title="Renombrar proyecto">✏️</button>
+            <button class="btn-share" (click)="openApprovals()" title="Solicitudes pendientes">⏳ {{ pendingCount }}</button>
             <button class="btn-share" (click)="openShareDialog()">
               👥 Invitar
             </button>
           }
+          <input
+            class="tag-filter"
+            [(ngModel)]="tagFilter"
+            placeholder="🔍 Filtrar por etiqueta"
+          />
+          <button
+            class="btn-share"
+            (click)="toggleArchive()"
+            [title]="showArchived ? 'Mostrar notas activas' : 'Ver notas archivadas'"
+          >
+            {{ showArchived ? '📂' : '🗄️' }}
+          </button>
           <button class="btn-add" [disabled]="addingNote" (click)="addNote()">
             {{ addingNote ? '...' : '+ Nueva nota' }}
           </button>
@@ -178,11 +192,13 @@ import { NoteResponse, ProjectResponse, InvitationResponse } from '../../models'
         (mouseup)="onMouseUp()"
         (mouseleave)="onMouseUp()"
       >
-        @for (note of notes; track note.id) {
+        @for (note of visibleNotes; track note.id) {
           <app-note-card
             [note]="note"
             (noteChange)="onNoteChange($event)"
             (deleteNote)="onDeleteNote($event)"
+            (archiveNote)="onArchiveNote($event)"
+            (metaChange)="onNoteMetaChanged($event)"
             (bringToFrontNote)="onBringToFront($event)"
             (sendToBackNote)="onSendToBack($event)"
             (dragStart)="onDragStart($event)"
@@ -197,6 +213,68 @@ import { NoteResponse, ProjectResponse, InvitationResponse } from '../../models'
           </div>
         }
       </div>
+      <!-- Sidebar para mover notas a otro proyecto (visible al arrastrar) -->
+      @if (moveSidebarVisible) {
+        <div class="move-sidebar" (mouseleave)="hoveredProjectId = ''">
+          <div class="move-sidebar-title">📋 Mover nota a...</div>
+          <div class="move-sidebar-sub">Soltá la nota sobre un proyecto para moverla</div>
+          @for (p of moveTargets; track p.id) {
+            <button class="move-target" (mouseover)="hoveredProjectId = p.id">📋 {{ p.name }}</button>
+          }
+        </div>
+      }
+
+      <!-- Renombrar proyecto -->
+      @if (showRename) {
+        <div class="dialog-overlay" (click)="showRename = false">
+          <div class="dialog" (click)="$event.stopPropagation()">
+            <h4>Renombrar proyecto</h4>
+            <input
+              class="input"
+              [(ngModel)]="renameName"
+              (keyup.enter)="saveRename()"
+              placeholder="Nuevo nombre"
+            />
+            <button class="btn-primary" (click)="saveRename()">Guardar</button>
+            <button class="btn-secondary" (click)="showRename = false">Cancelar</button>
+          </div>
+        </div>
+      }
+
+      <!-- Solicitudes de aprobación (owner) -->
+      @if (showApprovals) {
+        <div class="dialog-overlay" (click)="showApprovals = false">
+          <div class="dialog" (click)="$event.stopPropagation()">
+            <h4>Solicitudes pendientes ({{ pendingRequests.length }})</h4>
+            @if (pendingRequests.length === 0) {
+              <p class="help-text">No hay solicitudes pendientes.</p>
+            }
+            <div class="member-list">
+              @for (req of pendingRequests; track req.id) {
+                <div class="member-item">
+                  <div class="member-info">
+                    <span class="member-name">{{ req.noteTitle || '(Sin título)' }}</span>
+                    <span class="member-email">
+                      {{ req.requesterName }} solicita {{ req.type === 'Delete' ? 'eliminar' : 'archivar' }}
+                    </span>
+                  </div>
+                  <div class="member-actions">
+                    <button class="btn-sm" style="background:#dcfce7;color:#15803d" (click)="approveRequest(req.id)">✓ Aprobar</button>
+                    <button class="btn-sm" style="background:#fee2e2;color:#b91c1c" (click)="rejectRequest(req.id)">✕ Rechazar</button>
+                  </div>
+                </div>
+              }
+            </div>
+            <button class="btn-secondary" (click)="showApprovals = false">Cerrar</button>
+          </div>
+        </div>
+      }
+
+      <!-- Toast de notificación -->
+      @if (toastMessage) {
+        <div class="board-toast" (click)="toastMessage = ''">🔔 {{ toastMessage }}</div>
+      }
+
       <!-- Confirm dialog -->
       <app-confirm-dialog #confirmDialog></app-confirm-dialog>
     </div>
@@ -458,6 +536,74 @@ import { NoteResponse, ProjectResponse, InvitationResponse } from '../../models'
       }
       .btn-sm:hover { background: #e2e8f0; }
       .btn-revoke:hover { background: #fee2e2; }
+      .move-sidebar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 260px;
+        background: #f4f7fb;
+        border-left: 1px solid #e2e8f0;
+        box-shadow: -6px 0 20px rgba(0, 0, 0, 0.08);
+        padding: 20px 14px;
+        box-sizing: border-box;
+        z-index: 2147483000;
+      }
+      .move-sidebar-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 4px;
+      }
+      .move-sidebar-sub {
+        font-size: 11px;
+        color: #94a3b8;
+        margin-bottom: 14px;
+      }
+      .move-target {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+        border: none;
+        border-radius: 10px;
+        background: white;
+        color: #334155;
+        font-size: 13px;
+        cursor: pointer;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+        transition: background .15s;
+      }
+      .move-target:hover {
+        background: #667eea;
+        color: white;
+      }
+      .tag-filter {
+        padding: 8px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 12px;
+        outline: none;
+        width: 170px;
+      }
+      .tag-filter:focus {
+        border-color: #667eea;
+      }
+      .board-toast {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        background: #334155;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 10px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+        font-size: 13px;
+        z-index: 9999;
+        max-width: 320px;
+        cursor: pointer;
+      }
     `,
   ],
 })
@@ -470,6 +616,40 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
   inviteMessage = '';
   addingNote = false;
   inviting = false;
+
+  // Archivo / renombre / aprobaciones
+  showArchived = false;
+  showRename = false;
+  renameName = '';
+  showApprovals = false;
+  actionRequests: NoteActionRequestResponse[] = [];
+  allProjects: ProjectResponse[] = [];
+  moveSidebarVisible = false;
+  moveTargets: ProjectResponse[] = [];
+  hoveredProjectId = '';
+  tagFilter = '';
+  toastMessage = '';
+  private scheduledReminders = new Set<string>();
+  private notifiedReminders = new Set<string>();
+
+  get visibleNotes(): NoteCardData[] {
+    const q = this.tagFilter.trim().toLowerCase();
+    if (!q) return this.notes;
+    return this.notes.filter((n) =>
+      (n.tags ?? '')
+        .toLowerCase()
+        .split(',')
+        .some((t) => t.trim().includes(q))
+    );
+  }
+
+  get pendingCount(): number {
+    return this.actionRequests.filter((r) => r.status === 'Pending').length;
+  }
+
+  get pendingRequests(): NoteActionRequestResponse[] {
+    return this.actionRequests.filter((r) => r.status === 'Pending');
+  }
 
   // Invitation link state
   shareTab: 'email' | 'link' | 'members' = 'email';
@@ -504,7 +684,16 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
 
     this.loadProject();
     this.loadNotes();
+    this.loadActionRequests();
     this.joinSignalR();
+
+    // Proyectos del usuario (para mover notas y renombrar)
+    this.api.getProjects().subscribe((ps) => (this.allProjects = ps));
+
+    // Pedir permiso para notificaciones (recordatorios)
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
 
     // Auto-save with 500ms debounce
     this.saveSubject.pipe(debounceTime(500)).subscribe(({ noteId, changes }) => {
@@ -539,10 +728,17 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
   }
 
   private loadNotes(): void {
-    this.api.getNotes(this.projectId).subscribe({
+    this.api.getNotes(this.projectId, this.showArchived).subscribe({
       next: (data) => {
         this.notes = data.map((n) => this.toCardData(n));
+        this.scheduleReminders();
       },
+    });
+  }
+
+  private loadActionRequests(): void {
+    this.api.getActionRequests(this.projectId).subscribe({
+      next: (reqs) => (this.actionRequests = reqs),
     });
   }
 
@@ -562,9 +758,14 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
 
     this.signalR.noteUpdated$.subscribe((note) => {
       if (note.projectId === this.projectId) {
+        if (note.isArchived && !this.showArchived) {
+          this.notes = this.notes.filter((n) => n.id !== note.id);
+          return;
+        }
         this.notes = this.notes.map((n) =>
           n.id === note.id ? this.toCardData(note) : n
         );
+        this.scheduleReminders();
       }
     });
 
@@ -572,6 +773,14 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
       if (data.projectId === this.projectId) {
         this.notes = this.notes.filter((n) => n.id !== data.noteId);
       }
+    });
+
+    this.signalR.actionRequestCreated$.subscribe(() => {
+      this.loadActionRequests();
+    });
+
+    this.signalR.actionRequestResolved$.subscribe(() => {
+      this.loadActionRequests();
     });
 
     this.signalR.memberAdded$.subscribe(() => {
@@ -599,6 +808,7 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
         next: (note) => {
           this.notes = [...this.notes, this.toCardData(note)];
           this.addingNote = false;
+          this.scheduleReminders();
         },
         error: () => (this.addingNote = false),
       });
@@ -617,12 +827,189 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     });
   }
 
+  onNoteMetaChanged(meta: { noteId: string; tags: string; reminderAt: string | null; isTaskList: boolean }): void {
+    const note = this.notes.find((n) => n.id === meta.noteId);
+    if (!note) return;
+    note.isTaskList = meta.isTaskList;
+    note.tags = meta.tags || null;
+    note.reminderAt = meta.reminderAt;
+    this.notes = [...this.notes];
+    this.api
+      .updateNote(this.projectId, meta.noteId, {
+        tags: meta.tags,
+        reminderAt: meta.reminderAt,
+        clearReminder: !meta.reminderAt,
+        isTaskList: meta.isTaskList,
+      })
+      .subscribe(() => this.scheduleReminders());
+  }
+
+  // ── Recordatorios / notificaciones ──
+
+  private scheduleReminders(): void {
+    const now = Date.now();
+    for (const note of this.notes) {
+      if (!note.reminderAt || this.scheduledReminders.has(note.id)) continue;
+      const due = new Date(note.reminderAt).getTime();
+      if (isNaN(due)) continue;
+      this.scheduledReminders.add(note.id);
+      const delay = due - now;
+      if (delay <= 0) {
+        if (!this.notifiedReminders.has(note.id)) {
+          this.notifiedReminders.add(note.id);
+          this.notify(note);
+        }
+      } else {
+        setTimeout(() => {
+          if (!this.notifiedReminders.has(note.id)) {
+            this.notifiedReminders.add(note.id);
+            this.notify(note);
+          }
+        }, delay);
+      }
+    }
+  }
+
+  private notify(note: NoteCardData): void {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(note.title || 'Recordatorio', {
+          body: this.stripHtml(note.content || ''),
+          tag: note.id,
+        });
+        return;
+      } catch {
+        // fallback al toast
+      }
+    }
+    this.showToast(note.title || 'Recordatorio');
+  }
+
+  private showToast(msg: string): void {
+    this.toastMessage = msg;
+    setTimeout(() => (this.toastMessage = ''), 6000);
+  }
+
+  private stripHtml(html: string): string {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return (div.textContent || '').trim();
+  }
+
   onDeleteNote(noteId: string): void {
+    const note = this.notes.find((n) => n.id === noteId);
+    const isOwner = note?.isOwner ?? this.project?.ownerId === this.userId;
+
+    if (isOwner) {
+      this.confirmDialog.open(
+        'Eliminar nota',
+        '¿Estás seguro de eliminar esta nota? Esta acción no se puede deshacer.',
+        () => this.deleteNoteNow(noteId)
+      );
+    } else {
+      const ok = window.confirm(
+        'Como miembro, eliminar una nota requiere la aprobación del propietario.\nSe enviará una solicitud al owner. ¿Continuar?'
+      );
+      if (ok) this.deleteNoteNow(noteId);
+    }
+  }
+
+  private deleteNoteNow(noteId: string): void {
     this.api.deleteNote(this.projectId, noteId).subscribe({
-      next: () => {
-        this.notes = this.notes.filter((n) => n.id !== noteId);
+      next: (result) => {
+        if (result?.requestCreated) {
+          // Miembro: la nota queda marcada como pendiente de aprobación
+          this.loadNotes();
+          this.loadActionRequests();
+        } else if (result?.deleted) {
+          this.notes = this.notes.filter((n) => n.id !== noteId);
+        }
       },
     });
+  }
+
+  onArchiveNote(noteId: string): void {
+    const note = this.notes.find((n) => n.id === noteId);
+    if (!note) return;
+
+    // Restaurar: todos los miembros pueden
+    if (note.isArchived) {
+      this.api.unarchiveNote(this.projectId, noteId).subscribe(() => this.loadNotes());
+      return;
+    }
+
+    const isOwner = note.isOwner ?? this.project?.ownerId === this.userId;
+    if (isOwner) {
+      this.api.archiveNote(this.projectId, noteId).subscribe(() => this.loadNotes());
+      return;
+    }
+
+    const ok = window.confirm(
+      'Como miembro, archivar una nota requiere la aprobación del propietario.\nSe enviará una solicitud al owner. ¿Continuar?'
+    );
+    if (ok) {
+      this.api.archiveNote(this.projectId, noteId).subscribe(() => {
+        this.loadNotes();
+        this.loadActionRequests();
+      });
+    }
+  }
+
+  toggleArchive(): void {
+    this.showArchived = !this.showArchived;
+    this.loadNotes();
+  }
+
+  // ── Renombrar proyecto ──
+
+  openRenameDialog(): void {
+    this.renameName = this.project?.name ?? '';
+    this.showRename = true;
+  }
+
+  saveRename(): void {
+    const name = this.renameName.trim();
+    if (!name) return;
+    this.api
+      .updateProject(this.projectId, { name, description: this.project?.description })
+      .subscribe({
+        next: (p) => {
+          this.project = p;
+          this.showRename = false;
+        },
+      });
+  }
+
+  // ── Solicitudes de aprobación (owner) ──
+
+  openApprovals(): void {
+    this.loadActionRequests();
+    this.showApprovals = true;
+  }
+
+  approveRequest(requestId: string): void {
+    this.api.approveActionRequest(this.projectId, requestId).subscribe(() => {
+      this.loadActionRequests();
+    });
+  }
+
+  rejectRequest(requestId: string): void {
+    this.api.rejectActionRequest(this.projectId, requestId).subscribe(() => {
+      this.loadActionRequests();
+    });
+  }
+
+  // ── Mover nota a otro proyecto ──
+
+  private showMoveSidebar(): void {
+    this.moveTargets = this.allProjects.filter((p) => p.id !== this.projectId);
+    this.moveSidebarVisible = this.moveTargets.length > 0;
+    this.hoveredProjectId = '';
+  }
+
+  private hideMoveSidebar(): void {
+    this.moveSidebarVisible = false;
+    this.hoveredProjectId = '';
   }
 
   private _maxWebZIndex = 100;
@@ -658,6 +1045,7 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
       origX: note.positionX,
       origY: note.positionY,
     };
+    this.showMoveSidebar();
   }
 
   @HostListener('document:mousemove', ['$event'])
@@ -715,12 +1103,20 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     if (this.dragging) {
       const note = this.notes.find((n) => n.id === this.dragging!.noteId);
       if (note) {
-        this.saveSubject.next({
-          noteId: note.id,
-          changes: { positionX: note.positionX, positionY: note.positionY },
-        });
+        if (this.moveSidebarVisible && this.hoveredProjectId) {
+          const target = this.hoveredProjectId;
+          this.api.moveNote(this.projectId, note.id, target).subscribe(() => {
+            this.notes = this.notes.filter((n) => n.id !== note.id);
+          });
+        } else {
+          this.saveSubject.next({
+            noteId: note.id,
+            changes: { positionX: note.positionX, positionY: note.positionY },
+          });
+        }
       }
       this.dragging = null;
+      this.hideMoveSidebar();
     }
     if (this.resizing) {
       const note = this.notes.find((n) => n.id === this.resizing!.noteId);
@@ -853,7 +1249,7 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
 
   // ── Helpers ──
 
-  private toCardData(n: NoteResponse): NoteCardData {
+  private toCardData(n: NoteResponse | { id: string; projectId: string; title: string | null; content: string | null; color: string; positionX: number; positionY: number; width: number; height: number; isPinned: boolean; zIndex: number; isArchived: boolean; pendingArchive: boolean; pendingDelete: boolean; isOwner: boolean; isTaskList: boolean; tags: string | null; reminderAt: string | null }): NoteCardData {
     return {
       id: n.id,
       projectId: n.projectId,
@@ -866,6 +1262,13 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
       height: n.height,
       isPinned: n.isPinned,
       zIndex: n.zIndex,
+      isArchived: n.isArchived,
+      pendingArchive: n.pendingArchive,
+      pendingDelete: n.pendingDelete,
+      isOwner: n.isOwner,
+      isTaskList: n.isTaskList,
+      tags: n.tags,
+      reminderAt: n.reminderAt,
     };
   }
 }

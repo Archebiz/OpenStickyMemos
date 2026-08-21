@@ -5,12 +5,21 @@ using Microsoft.AspNetCore.SignalR.Client;
 
 namespace OpenStickyMemos.Desktop.Services;
 
+/// <summary>Payload del evento SignalR NoteDeleted.</summary>
+public class NoteDeletedEvent
+{
+    public string NoteId { get; set; } = string.Empty;
+    public string ProjectId { get; set; } = string.Empty;
+}
+
 public interface ISignalRService
 {
     bool IsConnected { get; }
     event Action<NoteResponse>? NoteCreated;
     event Action<NoteResponse>? NoteUpdated;
     event Action<string, string>? NoteDeleted; // noteId, projectId
+    event Action<NoteActionRequestResponse>? ActionRequestCreated;
+    event Action<NoteActionRequestResponse>? ActionRequestResolved;
     event Action<bool>? ConnectionStateChanged;
     Task StartAsync();
     Task JoinProjectAsync(string projectId);
@@ -28,6 +37,8 @@ public class SignalRService : ISignalRService
     public event Action<NoteResponse>? NoteCreated;
     public event Action<NoteResponse>? NoteUpdated;
     public event Action<string, string>? NoteDeleted;
+    public event Action<NoteActionRequestResponse>? ActionRequestCreated;
+    public event Action<NoteActionRequestResponse>? ActionRequestResolved;
     public event Action<bool>? ConnectionStateChanged;
 
     private static readonly string LogPath = Desktop.App.LogPath;
@@ -90,10 +101,22 @@ public class SignalRService : ISignalRService
             NoteUpdated?.Invoke(note);
         });
 
-        _connection.On<string, string>("NoteDeleted", (noteId, projectId) =>
+        _connection.On<NoteDeletedEvent>("NoteDeleted", evt =>
         {
-            Log($"Evento recibido: NoteDeleted (id={noteId}, projectId={projectId})");
-            NoteDeleted?.Invoke(noteId, projectId);
+            Log($"Evento recibido: NoteDeleted (id={evt.NoteId}, projectId={evt.ProjectId})");
+            NoteDeleted?.Invoke(evt.NoteId, evt.ProjectId);
+        });
+
+        _connection.On<NoteActionRequestResponse>("ActionRequestCreated", request =>
+        {
+            Log($"Evento recibido: ActionRequestCreated (id={request.Id}, type={request.Type})");
+            ActionRequestCreated?.Invoke(request);
+        });
+
+        _connection.On<NoteActionRequestResponse>("ActionRequestResolved", request =>
+        {
+            Log($"Evento recibido: ActionRequestResolved (id={request.Id}, status={request.Status})");
+            ActionRequestResolved?.Invoke(request);
         });
 
         _connection.Reconnecting += _ =>

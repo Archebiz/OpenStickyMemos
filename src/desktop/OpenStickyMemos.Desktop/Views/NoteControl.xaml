@@ -41,13 +41,14 @@
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#4A90D9"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="10,4"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="bg" CornerRadius="5"
-                                Background="#4A90D9" Padding="{TemplateBinding Padding}">
+                                Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -88,6 +89,21 @@
                     Background="{StaticResource GlassNoteOverlay}"
                     IsHitTestVisible="False"/>
 
+            <!-- Overlay de estado pendiente de aprobación (miembro solicitó archivar/eliminar) -->
+            <Border x:Name="PendingOverlay" Grid.RowSpan="3"
+                    CornerRadius="14" Margin="2"
+                    Background="#E6FFFFFF"
+                    IsHitTestVisible="False"
+                    Visibility="Collapsed">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="⏳" FontSize="18" TextAlignment="Center"/>
+                    <TextBlock x:Name="PendingText" Text="Pendiente de aprobación"
+                               FontSize="10" FontWeight="SemiBold"
+                               Foreground="#8A6D3B" TextAlignment="Center"
+                               Margin="8,4,8,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
             <!-- Toolbar: glass style (appears on hover) -->
             <Border x:Name="ToolbarOverlay" Grid.Row="0"
                     Background="{StaticResource GlassToolbarBg}"
@@ -115,6 +131,11 @@
                             FontSize="10" Width="22" Height="22"
                             ToolTip="Cambiar color"
                             Click="ColorButton_Click"/>
+                    <Button x:Name="ArchiveButton" Content="🗄️"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            FontSize="10" Width="22" Height="22"
+                            ToolTip="Archivar nota"
+                            Click="ArchiveButton_Click"/>
                     <Button x:Name="DeleteButton" Content="🗑"
                             Style="{StaticResource ToolbarButtonStyle}"
                             FontSize="10" Width="22" Height="22"
@@ -131,22 +152,39 @@
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Pinned indicator -->
+                <!-- Título con indicadores -->
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,2">
                     <TextBlock x:Name="PinIndicator" Text="📌" FontSize="9"
                                Visibility="Collapsed" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="ReminderBadge" Text="🔔" FontSize="9"
+                               Visibility="Collapsed" Margin="0,0,4,0" VerticalAlignment="Center"
+                               ToolTip="Recordatorio programado"/>
                     <TextBlock x:Name="ViewTitle" Grid.Row="0"
                                FontSize="13" FontWeight="SemiBold"
                                Foreground="#333" TextWrapping="Wrap"
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <TextBlock x:Name="ViewContent" Grid.Row="1"
-                           FontSize="12" Foreground="#555"
-                           TextWrapping="Wrap"
-                           Margin="0,2,0,4"/>
+                <RichTextBox x:Name="ViewRichContent" Grid.Row="1"
+                           IsReadOnly="True"
+                           Focusable="False"
+                           IsHitTestVisible="False"
+                           BorderThickness="0"
+                           Background="Transparent"
+                           Padding="0,2,0,4"
+                           VerticalScrollBarVisibility="Hidden"
+                           HorizontalScrollBarVisibility="Disabled"
+                           Visibility="Collapsed"/>
+
+                <!-- Lista de tareas (modo checklist) -->
+                <ScrollViewer x:Name="TaskListScroll" Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto"
+                              Visibility="Collapsed">
+                    <StackPanel x:Name="TaskListPanel" Margin="0,2,0,4"/>
+                </ScrollViewer>
 
                 <!-- Placeholder for empty notes -->
                 <TextBlock x:Name="EmptyPlaceholder" Grid.Row="2"
@@ -157,8 +195,12 @@
                            Visibility="Collapsed"
                            Margin="0,0,0,4"/>
 
+                <!-- Etiquetas (chips) -->
+                <WrapPanel x:Name="TagChipsPanel" Grid.Row="3"
+                           Visibility="Collapsed" Margin="0,2,0,0"/>
+
                 <!-- Author info -->
-                <StackPanel x:Name="AuthorPanel" Grid.Row="3" Orientation="Horizontal"
+                <StackPanel x:Name="AuthorPanel" Grid.Row="4" Orientation="Horizontal"
                             Visibility="Collapsed" Margin="0,2,0,0">
                     <Border Background="#00000015" CornerRadius="8" Padding="5,1,5,1">
                         <StackPanel Orientation="Horizontal">
@@ -189,16 +231,136 @@
                 </Border>
                 <Border Grid.Row="1" BorderBrush="#D0D0D0" BorderThickness="1"
                         CornerRadius="5" Background="#FFFFFFB0" MinHeight="50">
-                    <TextBox x:Name="ContentBox"
-                             Text="{Binding NoteContent, UpdateSourceTrigger=PropertyChanged}"
-                             FontSize="12" Background="Transparent"
-                             BorderThickness="0"
-                             Padding="6,4" TextWrapping="Wrap"
-                             AcceptsReturn="True" Foreground="#555"
-                             LostFocus="ContentBox_LostFocus"/>
+                    <StackPanel>
+                        <!-- Barra de formato -->
+                        <StackPanel Orientation="Horizontal" Margin="4,3,4,0">
+                            <Button Content="B" Style="{StaticResource ToolbarButtonStyle}"
+                                    FontWeight="Bold" FontSize="11"
+                                    ToolTip="Negrita" Click="BoldButton_Click"/>
+                            <Button Content="I" Style="{StaticResource ToolbarButtonStyle}"
+                                    FontStyle="Italic" FontSize="11"
+                                    ToolTip="Cursiva" Click="ItalicButton_Click"/>
+                            <Button Style="{StaticResource ToolbarButtonStyle}"
+                                    FontSize="11"
+                                    ToolTip="Subrayado" Click="UnderlineButton_Click">
+                                <TextBlock Text="U" TextDecorations="Underline"/>
+                            </Button>
+                            <Button Content="•" Style="{StaticResource ToolbarButtonStyle}"
+                                    FontSize="13"
+                                    ToolTip="Lista con viñetas" Click="BulletButton_Click"/>
+                            <Button x:Name="EmojiButton" Content="😊"
+                                    Style="{StaticResource ToolbarButtonStyle}"
+                                    FontSize="11"
+                                    ToolTip="Emoji" Click="EmojiButton_Click"/>
+                            <Border Width="1" Height="16" Background="#D0D0D0" Margin="4,0"/>
+                            <Button x:Name="TaskModeButton" Content="☑"
+                                    Style="{StaticResource ToolbarButtonStyle}"
+                                    FontSize="12"
+                                    ToolTip="Lista de tareas (modo checklist)"
+                                    Click="TaskModeButton_Click"/>
+                            <Button x:Name="TagsButton" Content="🏷"
+                                    Style="{StaticResource ToolbarButtonStyle}"
+                                    FontSize="11"
+                                    ToolTip="Etiquetas"
+                                    Click="TagsButton_Click"/>
+                            <Button x:Name="ReminderButton" Content="🔔"
+                                    Style="{StaticResource ToolbarButtonStyle}"
+                                    FontSize="11"
+                                    ToolTip="Recordatorio"
+                                    Click="ReminderButton_Click"/>
+                        </StackPanel>
+                        <RichTextBox x:Name="RichEditor"
+                                     FontSize="12" Background="Transparent"
+                                     BorderThickness="0"
+                                     Padding="4,4"
+                                     VerticalScrollBarVisibility="Auto"
+                                     AcceptsTab="True"
+                                     MinHeight="40"
+                                     LostFocus="RichEditor_LostFocus"/>
+
+                        <!-- Editor de lista de tareas (modo checklist) -->
+                        <ScrollViewer x:Name="TaskEditorScroll" Visibility="Collapsed"
+                                      VerticalScrollBarVisibility="Auto" MaxHeight="180">
+                            <StackPanel x:Name="TaskEditorItems" Margin="4,2,4,2"/>
+                        </ScrollViewer>
+                        <Button x:Name="AddTaskButton" Content="＋ Agregar tarea"
+                                Visibility="Collapsed"
+                                HorizontalAlignment="Left"
+                                Margin="6,2,6,4"
+                                FontSize="11"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="#4A90D9" Cursor="Hand"
+                                Click="AddTaskButton_Click"/>
+                    </StackPanel>
                 </Border>
+
+                <!-- Popup de etiquetas -->
+                <Popup x:Name="TagsPopup"
+                       PlacementTarget="{Binding ElementName=TagsButton}"
+                       Placement="Bottom"
+                       StaysOpen="False"
+                       AllowsTransparency="True">
+                    <Border Background="White" CornerRadius="8"
+                            BorderBrush="#DDD" BorderThickness="1" Padding="10">
+                        <StackPanel Width="200">
+                            <TextBlock Text="Etiquetas (separadas por coma)" FontSize="11"
+                                       Foreground="#666" Margin="0,0,0,4"/>
+                            <TextBox x:Name="TagsInput" FontSize="12" Padding="6,4"/>
+                            <Button Content="Aplicar" FontSize="11" Margin="0,6,0,0"
+                                    HorizontalAlignment="Right" Padding="10,3"
+                                    Background="#4A90D9" Foreground="White" BorderThickness="0"
+                                    Cursor="Hand" Click="ApplyTags_Click"/>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+
+                <!-- Popup de recordatorio -->
+                <Popup x:Name="ReminderPopup"
+                       PlacementTarget="{Binding ElementName=ReminderButton}"
+                       Placement="Bottom"
+                       StaysOpen="False"
+                       AllowsTransparency="True">
+                    <Border Background="White" CornerRadius="8"
+                            BorderBrush="#DDD" BorderThickness="1" Padding="10">
+                        <StackPanel Width="220">
+                            <TextBlock Text="Recordatorio" FontSize="11"
+                                       Foreground="#666" Margin="0,0,0,4"/>
+                            <DatePicker x:Name="ReminderDatePicker" FontSize="12"/>
+                            <TextBox x:Name="ReminderTimeInput" FontSize="12" Padding="6,4"
+                                     Margin="0,4,0,0" ToolTip="Hora HH:mm"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                                <Button Content="Quitar" FontSize="11" Margin="0,0,6,0"
+                                        Padding="8,3" Background="#F1F5F9" Foreground="#64748B"
+                                        BorderThickness="0" Cursor="Hand" Click="ClearReminder_Click"/>
+                                <Button Content="Fijar" FontSize="11"
+                                        Padding="10,3" Background="#4A90D9" Foreground="White"
+                                        BorderThickness="0" Cursor="Hand" Click="SetReminder_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+
+                <!-- Popup de emojis -->
+                <Popup x:Name="EmojiPopup"
+                       PlacementTarget="{Binding ElementName=EmojiButton}"
+                       Placement="Bottom"
+                       StaysOpen="False"
+                       AllowsTransparency="True">
+                    <Border Background="White" CornerRadius="8"
+                            BorderBrush="#DDD" BorderThickness="1" Padding="8">
+                        <ScrollViewer MaxHeight="180">
+                            <WrapPanel x:Name="EmojiPanel" Width="216"/>
+                        </ScrollViewer>
+                    </Border>
+                </Popup>
                 <StackPanel Grid.Row="2" Orientation="Horizontal"
                             HorizontalAlignment="Right" Margin="0,5,0,0">
+                    <Button x:Name="CancelEditButton" Content="✕ Cancelar"
+                            Style="{StaticResource SaveButtonStyle}"
+                            Background="#E2E8F0" Foreground="#64748B"
+                            Margin="0,0,6,0"
+                            ToolTip="Cancelar edición"
+                            Click="CancelEditButton_Click"/>
                     <Button x:Name="SaveButton" Content="✓ Guardar"
                             Style="{StaticResource SaveButtonStyle}"
                             Click="SaveButton_Click"/>

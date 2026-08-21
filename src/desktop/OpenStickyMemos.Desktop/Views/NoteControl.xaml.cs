@@ -1,9 +1,13 @@
+using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using OpenStickyMemos.Desktop.Services;
 
 namespace OpenStickyMemos.Desktop.Views;
 
@@ -33,6 +37,30 @@ public partial class NoteControl : UserControl
     public static readonly DependencyProperty AuthorNameProperty =
         DependencyProperty.Register(nameof(AuthorName), typeof(string), typeof(NoteControl),
             new PropertyMetadata(string.Empty, OnAuthorChanged));
+
+    public static readonly DependencyProperty IsArchivedProperty =
+        DependencyProperty.Register(nameof(IsArchived), typeof(bool), typeof(NoteControl),
+            new PropertyMetadata(false, OnArchivedChanged));
+
+    public static readonly DependencyProperty PendingArchiveProperty =
+        DependencyProperty.Register(nameof(PendingArchive), typeof(bool), typeof(NoteControl),
+            new PropertyMetadata(false, OnPendingChanged));
+
+    public static readonly DependencyProperty PendingDeleteProperty =
+        DependencyProperty.Register(nameof(PendingDelete), typeof(bool), typeof(NoteControl),
+            new PropertyMetadata(false, OnPendingChanged));
+
+    public static readonly DependencyProperty IsTaskListProperty =
+        DependencyProperty.Register(nameof(IsTaskList), typeof(bool), typeof(NoteControl),
+            new PropertyMetadata(false, OnTaskListChanged));
+
+    public static readonly DependencyProperty TagsProperty =
+        DependencyProperty.Register(nameof(Tags), typeof(string), typeof(NoteControl),
+            new PropertyMetadata(null, OnMetaChanged));
+
+    public static readonly DependencyProperty ReminderAtProperty =
+        DependencyProperty.Register(nameof(ReminderAt), typeof(DateTime?), typeof(NoteControl),
+            new PropertyMetadata(null, OnMetaChanged));
 
     public string NoteId
     {
@@ -70,12 +98,51 @@ public partial class NoteControl : UserControl
         set => SetValue(AuthorNameProperty, value);
     }
 
+    public bool IsArchived
+    {
+        get => (bool)GetValue(IsArchivedProperty);
+        set => SetValue(IsArchivedProperty, value);
+    }
+
+    public bool PendingArchive
+    {
+        get => (bool)GetValue(PendingArchiveProperty);
+        set => SetValue(PendingArchiveProperty, value);
+    }
+
+    public bool PendingDelete
+    {
+        get => (bool)GetValue(PendingDeleteProperty);
+        set => SetValue(PendingDeleteProperty, value);
+    }
+
+    public bool IsTaskList
+    {
+        get => (bool)GetValue(IsTaskListProperty);
+        set => SetValue(IsTaskListProperty, value);
+    }
+
+    public string? Tags
+    {
+        get => (string?)GetValue(TagsProperty);
+        set => SetValue(TagsProperty, value);
+    }
+
+    public DateTime? ReminderAt
+    {
+        get => (DateTime?)GetValue(ReminderAtProperty);
+        set => SetValue(ReminderAtProperty, value);
+    }
+
     // ── Events ──
 
     public event RoutedEventHandler? DeleteClicked;
     public event Action<string, string, string>? ContentChanged; // noteId, title, content
     public event Action<string, bool>? PinToggled; // noteId, isPinned
     public event Action<string>? ColorClicked; // noteId
+    public event Action<string>? ArchiveClicked; // noteId
+    public event Action<string, bool>? TaskModeToggled; // noteId, isTaskList
+    public event Action<string, string?, DateTime?>? MetaChanged; // noteId, tags, reminderAt
     public event Action<string>? BringToFrontClicked; // noteId
     public event Action<string>? SendToBackClicked; // noteId
     public event Action<string, double, double>? ResizeCompleted; // noteId, width, height
@@ -106,6 +173,10 @@ public partial class NoteControl : UserControl
         ApplyColor();
         ApplyPinStyle(IsPinned);
         SyncAuthorInfo();
+        SyncArchiveButton();
+        UpdatePendingState();
+        UpdateMetaView();
+        BuildEmojiPanel();
 
         // Sutil fade-in desde opacidad alta para evitar intermediate render target
         // que causa ghosting al arrastrar notas nuevas (Opacity<1 + DropShadowEffect
@@ -197,6 +268,32 @@ public partial class NoteControl : UserControl
         }
     }
 
+    private static void OnArchivedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is NoteControl ctrl) ctrl.SyncArchiveButton();
+    }
+
+    private static void OnPendingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is NoteControl ctrl) ctrl.UpdatePendingState();
+    }
+
+    private static void OnTaskListChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is NoteControl ctrl)
+        {
+            ctrl.UpdateTaskModeButtonVisual();
+            ctrl.UpdateMetaView();
+            if (!ctrl._isEditing)
+                ctrl.SyncViewMode();
+        }
+    }
+
+    private static void OnMetaChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is NoteControl ctrl) ctrl.UpdateMetaView();
+    }
+
     // ── View/Edit mode ──
 
     private bool _isEditing;
@@ -207,9 +304,26 @@ public partial class NoteControl : UserControl
         if (_isEditing) return;
         _isEditing = true;
         TitleBox.Text = Title;
-        ContentBox.Text = NoteContent;
+
+        if (IsTaskList)
+        {
+            _editTasks = ParseTasks(NoteContent);
+            RichEditor.Visibility = Visibility.Collapsed;
+            TaskEditorScroll.Visibility = Visibility.Visible;
+            AddTaskButton.Visibility = Visibility.Visible;
+            RebuildTaskEditor();
+        }
+        else
+        {
+            RichEditor.Visibility = Visibility.Visible;
+            TaskEditorScroll.Visibility = Visibility.Collapsed;
+            AddTaskButton.Visibility = Visibility.Collapsed;
+            RichEditor.Document = RichTextConverter.ToFlowDocument(NoteContent);
+        }
+
         ViewPanel.Visibility = Visibility.Collapsed;
         EditPanel.Visibility = Visibility.Visible;
+        UpdateTaskModeButtonVisual();
         TitleBox.Focus();
         TitleBox.SelectAll();
     }
@@ -223,10 +337,13 @@ public partial class NoteControl : UserControl
         if (save)
         {
             Title = TitleBox.Text;
-            NoteContent = ContentBox.Text;
+            NoteContent = IsTaskList
+                ? SerializeTasks(_editTasks ?? ParseTasks(NoteContent))
+                : RichTextConverter.ToHtml(RichEditor.Document);
             SyncViewMode();
             ContentChanged?.Invoke(NoteId, Title, NoteContent);
         }
+        _editTasks = null;
     }
 
     private void SyncViewMode()
@@ -239,12 +356,33 @@ public partial class NoteControl : UserControl
             : new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA));
 
         var hasContent = !string.IsNullOrEmpty(NoteContent);
-        ViewContent.Text = NoteContent ?? string.Empty;
-        ViewContent.Visibility = hasContent ? Visibility.Visible : Visibility.Collapsed;
+
+        if (IsTaskList)
+        {
+            // Modo tareas: mostrar filas con checkbox (se tachan al marcar)
+            ViewRichContent.Visibility = Visibility.Collapsed;
+            TaskListScroll.Visibility = Visibility.Visible;
+            RebuildTaskView();
+        }
+        else
+        {
+            TaskListScroll.Visibility = Visibility.Collapsed;
+            if (hasContent)
+            {
+                ViewRichContent.Document = RichTextConverter.ToFlowDocument(NoteContent);
+                ViewRichContent.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                ViewRichContent.Visibility = Visibility.Collapsed;
+            }
+        }
 
         // Show placeholder "Doble click para editar" when note is completely empty
-        var isEmpty = !hasTitle && !hasContent;
+        var isEmpty = !hasTitle && !hasContent && !IsTaskList;
         EmptyPlaceholder.Visibility = isEmpty ? Visibility.Visible : Visibility.Collapsed;
+
+        UpdateMetaView();
     }
 
     // ── Author ──
@@ -324,18 +462,16 @@ public partial class NoteControl : UserControl
         if (_isEditing)
         {
             Title = TitleBox.Text;
-            NoteContent = ContentBox.Text;
             SyncViewMode();
         }
     }
 
-    private void ContentBox_LostFocus(object sender, RoutedEventArgs e)
+    private void RichEditor_LostFocus(object sender, RoutedEventArgs e)
     {
         // Don't exit edit mode - just save silently
         if (_isEditing)
         {
-            Title = TitleBox.Text;
-            NoteContent = ContentBox.Text;
+            NoteContent = RichTextConverter.ToHtml(RichEditor.Document);
             SyncViewMode();
         }
     }
@@ -343,6 +479,196 @@ public partial class NoteControl : UserControl
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
         EndEdit(save: true);
+    }
+
+    private void CancelEditButton_Click(object sender, RoutedEventArgs e)
+    {
+        EndEdit(save: false);
+    }
+
+    private void ArchiveButton_Click(object sender, RoutedEventArgs e)
+    {
+        ArchiveClicked?.Invoke(NoteId);
+    }
+
+    private void SyncArchiveButton()
+    {
+        if (ArchiveButton is null) return;
+        if (IsArchived)
+        {
+            ArchiveButton.Content = "📥";
+            ArchiveButton.ToolTip = "Restaurar nota";
+        }
+        else
+        {
+            ArchiveButton.Content = "🗄️";
+            ArchiveButton.ToolTip = "Archivar nota";
+        }
+    }
+
+    private void UpdatePendingState()
+    {
+        if (PendingOverlay is null || NoteBorder is null) return;
+        var pending = PendingArchive || PendingDelete;
+        PendingOverlay.Visibility = pending ? Visibility.Visible : Visibility.Collapsed;
+        NoteBorder.Opacity = pending ? 0.65 : 1.0;
+        if (pending)
+            PendingText.Text = PendingDelete
+                ? "Pendiente de aprobación para eliminar"
+                : "Pendiente de aprobación para archivar";
+    }
+
+    // ── Formato enriquecido ──
+
+    private void BoldButton_Click(object sender, RoutedEventArgs e)
+    {
+        var isBold = RichEditor.Selection.GetPropertyValue(TextElement.FontWeightProperty) is FontWeight fw
+            && fw == FontWeights.Bold;
+        RichEditor.Selection.ApplyPropertyValue(TextElement.FontWeightProperty,
+            isBold ? FontWeights.Normal : FontWeights.Bold);
+        RichEditor.Focus();
+    }
+
+    private void ItalicButton_Click(object sender, RoutedEventArgs e)
+    {
+        var isItalic = RichEditor.Selection.GetPropertyValue(TextElement.FontStyleProperty) is FontStyle fs
+            && fs == FontStyles.Italic;
+        RichEditor.Selection.ApplyPropertyValue(TextElement.FontStyleProperty,
+            isItalic ? FontStyles.Normal : FontStyles.Italic);
+        RichEditor.Focus();
+    }
+
+    private void UnderlineButton_Click(object sender, RoutedEventArgs e)
+    {
+        var hasUnderline = RichEditor.Selection.GetPropertyValue(TextBlock.TextDecorationsProperty) is TextDecorationCollection dec
+            && HasUnderline(dec);
+        RichEditor.Selection.ApplyPropertyValue(TextBlock.TextDecorationsProperty,
+            hasUnderline ? null : TextDecorations.Underline);
+        RichEditor.Focus();
+    }
+
+    private static bool HasUnderline(TextDecorationCollection decorations)
+    {
+        foreach (var d in decorations)
+            if (d.Location == TextDecorationLocation.Underline) return true;
+        return false;
+    }
+
+    private void BulletButton_Click(object sender, RoutedEventArgs e)
+    {
+        ToggleBullets();
+        RichEditor.Focus();
+    }
+
+    private void ToggleBullets()
+    {
+        var current = RichEditor.Selection.Start.Paragraph;
+        if (current is not null && current.Parent is ListItem item && item.Parent is List existingList)
+        {
+            UnwrapList(existingList);
+        }
+        else if (current is not null)
+        {
+            WrapParagraphInList(current);
+        }
+    }
+
+    private void WrapParagraphInList(Paragraph paragraph)
+    {
+        if (paragraph is null) return;
+
+        var list = new List();
+        var listItem = new ListItem();
+        var itemParagraph = new Paragraph();
+
+        while (paragraph.Inlines.Count > 0)
+        {
+            var inline = paragraph.Inlines.FirstInline;
+            paragraph.Inlines.Remove(inline);
+            itemParagraph.Inlines.Add(inline);
+        }
+
+        listItem.Blocks.Add(itemParagraph);
+        list.ListItems.Add(listItem);
+
+        var doc = RichEditor.Document;
+        doc.Blocks.InsertBefore(paragraph, list);
+        doc.Blocks.Remove(paragraph);
+    }
+
+    private void UnwrapList(List list)
+    {
+        var doc = RichEditor.Document;
+
+        Block? insertAfter = list;
+        var paragraphs = list.ListItems
+            .SelectMany(item => item.Blocks)
+            .OfType<Paragraph>()
+            .ToList();
+
+        foreach (var p in paragraphs)
+        {
+            var para = new Paragraph();
+            while (p.Inlines.Count > 0)
+            {
+                var inline = p.Inlines.FirstInline;
+                p.Inlines.Remove(inline);
+                para.Inlines.Add(inline);
+            }
+            doc.Blocks.InsertAfter(insertAfter, para);
+            insertAfter = para;
+        }
+
+        doc.Blocks.Remove(list);
+    }
+
+    // ── Emojis ──
+
+    private static readonly string[] Emojis =
+    {
+        "😀","😄","😊","🙂","😉","😍","😘","😎","🤔","😴",
+        "👍","👎","👏","🙌","🤝","💪","🙏","👋","✋","👌",
+        "❤️","💙","💚","💛","💜","⭐","✨","🔥","💯","🎉",
+        "✅","❌","⚠️","📌","📝","📁","🗂️","🔔","⏰","💡",
+        "🚀","⭐","🍕","☕","🍎","🌮","⚽","🎮","🎵","🌙"
+    };
+
+    private void BuildEmojiPanel()
+    {
+        if (EmojiPanel is null || EmojiPanel.Children.Count > 0) return;
+        foreach (var emoji in Emojis)
+        {
+            var btn = new Button
+            {
+                Content = emoji,
+                Width = 30,
+                Height = 30,
+                Margin = new Thickness(2),
+                FontSize = 16,
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand,
+                Tag = emoji
+            };
+            btn.Click += EmojiSelected_Click;
+            EmojiPanel.Children.Add(btn);
+        }
+    }
+
+    private void EmojiButton_Click(object sender, RoutedEventArgs e)
+    {
+        BuildEmojiPanel();
+        EmojiPopup.IsOpen = true;
+    }
+
+    private void EmojiSelected_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string emoji)
+        {
+            RichEditor.CaretPosition.InsertTextInRun(emoji);
+            RichEditor.Focus();
+        }
+        EmojiPopup.IsOpen = false;
     }
 
     private void BringFrontButton_Click(object sender, RoutedEventArgs e)
@@ -376,6 +702,339 @@ public partial class NoteControl : UserControl
             ResizeCompleted?.Invoke(NoteId, Width, Height);
     }
 
+    // ── Lista de tareas (modo checklist) ──
+
+    private class TaskItem
+    {
+        public string Text { get; set; } = string.Empty;
+        public bool Checked { get; set; }
+    }
+
+    private List<TaskItem>? _editTasks;
+
+    private static List<TaskItem> ParseTasks(string? html)
+    {
+        var tasks = new List<TaskItem>();
+        if (string.IsNullOrWhiteSpace(html)) return tasks;
+
+        var regex = new System.Text.RegularExpressions.Regex(
+            "<li(?<attrs>[^>]*)>(?<text>.*?)</li>",
+            System.Text.RegularExpressions.RegexOptions.Singleline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        foreach (System.Text.RegularExpressions.Match m in regex.Matches(html))
+        {
+            var attrs = m.Groups["attrs"].Value;
+            tasks.Add(new TaskItem
+            {
+                Text = StripTags(m.Groups["text"].Value),
+                Checked = attrs.Contains("checked", StringComparison.OrdinalIgnoreCase)
+            });
+        }
+        return tasks;
+    }
+
+    private static string StripTags(string html)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(
+            System.Net.WebUtility.HtmlDecode(html), "<[^>]+>", string.Empty).Trim();
+    }
+
+    private static string SerializeTasks(IEnumerable<TaskItem> tasks)
+    {
+        var sb = new StringBuilder();
+        sb.Append("<ul class=\"osm-tasks\">");
+        foreach (var t in tasks)
+        {
+            sb.Append("<li");
+            if (t.Checked) sb.Append(" class=\"checked\"");
+            sb.Append(">").Append(System.Net.WebUtility.HtmlEncode(t.Text)).Append("</li>");
+        }
+        sb.Append("</ul>");
+        return sb.ToString();
+    }
+
+    private static List<TaskItem> ContentToTasks(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return new List<TaskItem> { new() { Text = string.Empty } };
+        if (content.Contains("osm-tasks", StringComparison.OrdinalIgnoreCase))
+            return ParseTasks(content);
+
+        var lines = StripTags(content)
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var tasks = lines.Select(l => new TaskItem { Text = l }).ToList();
+        if (tasks.Count == 0) tasks.Add(new TaskItem { Text = string.Empty });
+        return tasks;
+    }
+
+    private static string TasksToRichHtml(List<TaskItem> tasks)
+    {
+        var sb = new StringBuilder();
+        sb.Append("<ul>");
+        foreach (var t in tasks)
+        {
+            if (string.IsNullOrWhiteSpace(t.Text)) continue;
+            sb.Append("<li>").Append(System.Net.WebUtility.HtmlEncode(t.Text)).Append("</li>");
+        }
+        sb.Append("</ul>");
+        return sb.ToString();
+    }
+
+    private void RebuildTaskView()
+    {
+        if (TaskListPanel is null) return;
+        TaskListPanel.Children.Clear();
+        if (!IsTaskList) return;
+
+        var tasks = ParseTasks(NoteContent);
+        for (int i = 0; i < tasks.Count; i++)
+        {
+            var task = tasks[i];
+            var index = i;
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 1, 0, 1) };
+            var cb = new CheckBox
+            {
+                IsChecked = task.Checked,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 5, 0),
+                Cursor = Cursors.Hand
+            };
+            cb.Checked += (_, _) => OnTaskViewToggled(index, true);
+            cb.Unchecked += (_, _) => OnTaskViewToggled(index, false);
+
+            var tb = new TextBlock
+            {
+                Text = task.Text,
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55)),
+                TextWrapping = TextWrapping.Wrap,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            if (task.Checked)
+                tb.TextDecorations = TextDecorations.Strikethrough;
+
+            row.Children.Add(cb);
+            row.Children.Add(tb);
+            TaskListPanel.Children.Add(row);
+        }
+    }
+
+    private void OnTaskViewToggled(int index, bool isChecked)
+    {
+        var tasks = ParseTasks(NoteContent);
+        if (index < tasks.Count)
+        {
+            tasks[index].Checked = isChecked;
+            NoteContent = SerializeTasks(tasks);
+            SyncViewMode();
+            ContentChanged?.Invoke(NoteId, Title, NoteContent);
+        }
+    }
+
+    private void RebuildTaskEditor()
+    {
+        if (TaskEditorItems is null) return;
+        TaskEditorItems.Children.Clear();
+        _editTasks ??= new List<TaskItem>();
+        if (_editTasks.Count == 0)
+            _editTasks.Add(new TaskItem { Text = string.Empty });
+        foreach (var task in _editTasks)
+            AddTaskRow(task);
+    }
+
+    private void AddTaskRow(TaskItem task)
+    {
+        var row = new Grid { Margin = new Thickness(0, 1, 0, 1) };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var cb = new CheckBox
+        {
+            IsChecked = task.Checked,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 5, 0),
+            Cursor = Cursors.Hand
+        };
+        cb.Checked += (_, _) => task.Checked = true;
+        cb.Unchecked += (_, _) => task.Checked = false;
+
+        var tb = new TextBox
+        {
+            Text = task.Text,
+            FontSize = 12,
+            Padding = new Thickness(4, 2, 4, 2),
+            BorderThickness = new Thickness(0),
+            Background = Brushes.Transparent
+        };
+        tb.TextChanged += (_, _) => task.Text = tb.Text;
+
+        var remove = new Button
+        {
+            Content = "✕",
+            Width = 18,
+            Height = 18,
+            FontSize = 9,
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Foreground = new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA)),
+            Cursor = Cursors.Hand,
+            ToolTip = "Quitar tarea",
+            Tag = task
+        };
+        remove.Click += RemoveTask_Click;
+
+        Grid.SetColumn(cb, 0);
+        Grid.SetColumn(tb, 1);
+        Grid.SetColumn(remove, 2);
+        row.Children.Add(cb);
+        row.Children.Add(tb);
+        row.Children.Add(remove);
+        TaskEditorItems.Children.Add(row);
+    }
+
+    private void AddTaskButton_Click(object sender, RoutedEventArgs e)
+    {
+        _editTasks ??= new List<TaskItem>();
+        var task = new TaskItem { Text = string.Empty };
+        _editTasks.Add(task);
+        AddTaskRow(task);
+    }
+
+    private void RemoveTask_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is TaskItem task && _editTasks is not null)
+        {
+            _editTasks.Remove(task);
+            RebuildTaskEditor();
+        }
+    }
+
+    private void TaskModeButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_isEditing) return;
+
+        IsTaskList = !IsTaskList;
+
+        if (IsTaskList)
+        {
+            _editTasks = ContentToTasks(NoteContent);
+            RichEditor.Visibility = Visibility.Collapsed;
+            TaskEditorScroll.Visibility = Visibility.Visible;
+            AddTaskButton.Visibility = Visibility.Visible;
+            RebuildTaskEditor();
+        }
+        else
+        {
+            var html = TasksToRichHtml(_editTasks ?? ParseTasks(NoteContent));
+            RichEditor.Document = RichTextConverter.ToFlowDocument(html);
+            RichEditor.Visibility = Visibility.Visible;
+            TaskEditorScroll.Visibility = Visibility.Collapsed;
+            AddTaskButton.Visibility = Visibility.Collapsed;
+            _editTasks = null;
+        }
+
+        UpdateTaskModeButtonVisual();
+        TaskModeToggled?.Invoke(NoteId, IsTaskList);
+    }
+
+    private void UpdateTaskModeButtonVisual()
+    {
+        if (TaskModeButton is null) return;
+        TaskModeButton.Background = IsTaskList
+            ? new SolidColorBrush(Color.FromRgb(0xDD, 0xEA, 0xFB))
+            : Brushes.Transparent;
+        TaskModeButton.ToolTip = IsTaskList
+            ? "Lista de tareas activa (clic para volver a texto)"
+            : "Lista de tareas (modo checklist)";
+    }
+
+    // ── Etiquetas y recordatorio ──
+
+    private void UpdateMetaView()
+    {
+        if (ReminderBadge is not null)
+            ReminderBadge.Visibility = ReminderAt.HasValue ? Visibility.Visible : Visibility.Collapsed;
+
+        if (TagChipsPanel is null) return;
+        TagChipsPanel.Children.Clear();
+        if (string.IsNullOrWhiteSpace(Tags))
+        {
+            TagChipsPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        foreach (var tag in Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            TagChipsPanel.Children.Add(new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0xED, 0xF2, 0xF7)),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(6, 1, 6, 1),
+                Margin = new Thickness(0, 0, 4, 2),
+                Child = new TextBlock
+                {
+                    Text = "#" + tag,
+                    FontSize = 9,
+                    Foreground = new SolidColorBrush(Color.FromRgb(0x64, 0x74, 0x8B))
+                }
+            });
+        }
+        TagChipsPanel.Visibility = Visibility.Visible;
+    }
+
+    private void TagsButton_Click(object sender, RoutedEventArgs e)
+    {
+        TagsInput.Text = Tags ?? string.Empty;
+        TagsPopup.IsOpen = true;
+    }
+
+    private void ApplyTags_Click(object sender, RoutedEventArgs e)
+    {
+        Tags = string.IsNullOrWhiteSpace(TagsInput.Text) ? null : TagsInput.Text;
+        TagsPopup.IsOpen = false;
+        UpdateMetaView();
+        MetaChanged?.Invoke(NoteId, Tags, ReminderAt);
+    }
+
+    private void ReminderButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (ReminderAt.HasValue)
+        {
+            var local = ReminderAt.Value.ToLocalTime();
+            ReminderDatePicker.SelectedDate = local.Date;
+            ReminderTimeInput.Text = local.ToString("HH:mm");
+        }
+        else
+        {
+            ReminderDatePicker.SelectedDate = DateTime.Today;
+            ReminderTimeInput.Text = "09:00";
+        }
+        ReminderPopup.IsOpen = true;
+    }
+
+    private void SetReminder_Click(object sender, RoutedEventArgs e)
+    {
+        var date = ReminderDatePicker.SelectedDate;
+        if (date is null || !TimeSpan.TryParse(ReminderTimeInput.Text, out var time))
+        {
+            MessageBox.Show("Ingresá una fecha y una hora válidas (HH:mm).", "Recordatorio",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        ReminderAt = date.Value.Date.Add(time).ToUniversalTime();
+        ReminderPopup.IsOpen = false;
+        UpdateMetaView();
+        MetaChanged?.Invoke(NoteId, Tags, ReminderAt);
+    }
+
+    private void ClearReminder_Click(object sender, RoutedEventArgs e)
+    {
+        ReminderAt = null;
+        ReminderPopup.IsOpen = false;
+        UpdateMetaView();
+        MetaChanged?.Invoke(NoteId, Tags, ReminderAt);
+    }
+
     // ── Double-click to edit ──
 
     protected override void OnMouseDown(MouseButtonEventArgs e)
@@ -395,7 +1054,24 @@ public partial class NoteControl : UserControl
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonDown(e);
-        if (e.OriginalSource is not Thumb && e.ClickCount == 1 && !IsPinned)
+        if (e.OriginalSource is not Thumb && e.ClickCount == 1 && !IsPinned && !_isEditing)
+        {
+            // No arrastrar al interactuar con checkboxes o el área de tareas
+            if (IsTaskControlClick(e.OriginalSource)) return;
             NoteMouseDown?.Invoke(this, e);
+        }
+    }
+
+    private bool IsTaskControlClick(object? source)
+    {
+        if (source is not DependencyObject d) return false;
+        var current = d;
+        while (current is not null)
+        {
+            if (ReferenceEquals(current, TaskListPanel) || ReferenceEquals(current, TaskEditorScroll))
+                return true;
+            current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+        }
+        return false;
     }
 }

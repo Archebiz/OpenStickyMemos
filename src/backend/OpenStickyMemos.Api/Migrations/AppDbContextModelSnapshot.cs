@@ -45,7 +45,19 @@ namespace OpenStickyMemos.Api.Migrations
                     b.Property<double>("Height")
                         .HasColumnType("double precision");
 
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsPinned")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsTaskList")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("PendingArchive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("PendingDelete")
                         .HasColumnType("boolean");
 
                     b.Property<double>("PositionX")
@@ -56,6 +68,13 @@ namespace OpenStickyMemos.Api.Migrations
 
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ReminderAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Tags")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("Title")
                         .HasMaxLength(256)
@@ -77,6 +96,53 @@ namespace OpenStickyMemos.Api.Migrations
                     b.HasIndex("ProjectId");
 
                     b.ToTable("Notes");
+                });
+
+            modelBuilder.Entity("OpenStickyMemos.Api.Models.NoteActionRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DecidedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("NoteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NoteTitle")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RequesterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DecidedById");
+
+                    b.HasIndex("NoteId");
+
+                    b.HasIndex("RequesterId");
+
+                    b.HasIndex("ProjectId", "Status");
+
+                    b.ToTable("NoteActionRequests");
                 });
 
             modelBuilder.Entity("OpenStickyMemos.Api.Models.Project", b =>
@@ -295,6 +361,40 @@ namespace OpenStickyMemos.Api.Migrations
                     b.Navigation("Author");
 
                     b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("OpenStickyMemos.Api.Models.NoteActionRequest", b =>
+                {
+                    b.HasOne("OpenStickyMemos.Api.Models.User", "DecidedBy")
+                        .WithMany()
+                        .HasForeignKey("DecidedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("OpenStickyMemos.Api.Models.Note", "Note")
+                        .WithMany()
+                        .HasForeignKey("NoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpenStickyMemos.Api.Models.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpenStickyMemos.Api.Models.User", "Requester")
+                        .WithMany()
+                        .HasForeignKey("RequesterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DecidedBy");
+
+                    b.Navigation("Note");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("Requester");
                 });
 
             modelBuilder.Entity("OpenStickyMemos.Api.Models.Project", b =>

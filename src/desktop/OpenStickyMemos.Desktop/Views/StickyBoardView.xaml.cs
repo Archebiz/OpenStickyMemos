@@ -27,10 +27,46 @@ public partial class StickyBoardView : UserControl
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _vm = (StickyBoardViewModel)DataContext;
-        _ = _vm.LoadBoardAsync();
         _vm.NoteAdded += AddNoteToCanvas;
         _vm.NoteUpdated += UpdateNoteOnCanvas;
         _vm.NoteRemoved += RemoveNoteFromCanvas;
+        _vm.BoardCleared += ClearNotesCanvas;
+        _vm.ActionRequestsChanged += UpdateApprovalsBadge;
+        _vm.ReminderDue += ShowReminderToast;
+        _ = LoadBoardAndRefreshAsync();
+    }
+
+    private async Task LoadBoardAndRefreshAsync()
+    {
+        await _vm.LoadBoardAsync();
+        RefreshHeaderButtons();
+    }
+
+    private void RefreshHeaderButtons()
+    {
+        if (_vm is null) return;
+        RenameProjectButton.Visibility = _vm.IsOwner ? Visibility.Visible : Visibility.Collapsed;
+        ApprovalsButton.Visibility = _vm.IsOwner ? Visibility.Visible : Visibility.Collapsed;
+        UpdateApprovalsBadge();
+    }
+
+    private void UpdateApprovalsBadge()
+    {
+        if (_vm is null || ApprovalsButton is null) return;
+        var pending = _vm.ActionRequests.Count(r => r.Status == "Pending");
+        ApprovalsButton.Content = $"⏳ {pending}";
+        ApprovalsButton.ToolTip = pending == 0
+            ? "Sin solicitudes pendientes"
+            : $"{pending} solicitud(es) pendiente(s) de aprobación";
+    }
+
+    private void ClearNotesCanvas()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            NotesCanvas.Children.Clear();
+            _maxZIndex = 0;
+        });
     }
 
     private void BackButton_Click(object sender, RoutedEventArgs e)
@@ -81,6 +117,12 @@ public partial class StickyBoardView : UserControl
                     nc.NoteContent = note.Content ?? string.Empty;
                     nc.NoteColor = note.Color;
                     nc.IsPinned = note.IsPinned;
+                    nc.IsArchived = note.IsArchived;
+                    nc.PendingArchive = note.PendingArchive;
+                    nc.PendingDelete = note.PendingDelete;
+                    nc.IsTaskList = note.IsTaskList;
+                    nc.Tags = note.Tags;
+                    nc.ReminderAt = note.ReminderAt;
                     Panel.SetZIndex(nc, note.ZIndex);
 
                     // No sobreescribir posición/tamaño si estamos arrastrando/redimensionando localmente
@@ -121,6 +163,12 @@ public partial class StickyBoardView : UserControl
             NoteContent = note.Content ?? string.Empty,
             NoteColor = note.Color,
             IsPinned = note.IsPinned,
+            IsArchived = note.IsArchived,
+            PendingArchive = note.PendingArchive,
+            PendingDelete = note.PendingDelete,
+            IsTaskList = note.IsTaskList,
+            Tags = note.Tags,
+            ReminderAt = note.ReminderAt,
             AuthorName = note.AuthorName ?? string.Empty,
             Width = note.Width,
             Height = note.Height,
@@ -129,6 +177,9 @@ public partial class StickyBoardView : UserControl
         ctrl.NoteMouseDown += OnNoteMouseDown;
         ctrl.ContentChanged += OnNoteContentChanged;
         ctrl.DeleteClicked += OnNoteDeleteClicked;
+        ctrl.ArchiveClicked += OnNoteArchiveClicked;
+        ctrl.TaskModeToggled += OnNoteTaskModeToggled;
+        ctrl.MetaChanged += OnNoteMetaChanged;
         ctrl.PinToggled += OnNotePinToggled;
         ctrl.ColorClicked += OnNoteColorClicked;
         ctrl.BringToFrontClicked += OnBringToFront;
@@ -157,6 +208,9 @@ public partial class StickyBoardView : UserControl
         _dragStart = e.GetPosition(NotesCanvas);
         _isDragging = true;
         note.CaptureMouse();
+
+        // Mostrar sidebar para mover la nota a otro proyecto
+        ShowMoveSidebar();
 
         // Bring to front
         _maxZIndex++;
@@ -194,13 +248,25 @@ public partial class StickyBoardView : UserControl
             _isDragging = false;
             _dragNote.ReleaseMouseCapture();
 
-            // Notify VM of new position
-            _vm.UpdateNotePosition(
-                _dragNote.NoteId,
-                Canvas.GetLeft(_dragNote),
-                Canvas.GetTop(_dragNote));
+            var noteId = _dragNote.NoteId;
+            var left = Canvas.GetLeft(_dragNote);
+            var top = Canvas.GetTop(_dragNote);
 
-            _localChanges.Remove(_dragNote.NoteId);
+            // ¿Soltó sobre un proyecto del sidebar para mover la nota?
+            var targetProjectId = GetProjectUnderPointer(e.GetPosition(MoveSidebarOverlay));
+            HideMoveSidebar();
+
+            if (!string.IsNullOrEmpty(targetProjectId))
+            {
+                _ = _vm.MoveNoteToProjectAsync(noteId, targetProjectId);
+            }
+            else
+            {
+                // Notify VM of new position
+                _vm.UpdateNotePosition(noteId, left, top);
+            }
+
+            _localChanges.Remove(noteId);
             _dragNote = null;
         }
     }
@@ -210,12 +276,64 @@ public partial class StickyBoardView : UserControl
         _vm.UpdateNoteContent(noteId, title, content);
     }
 
+    private void OnNoteTaskModeToggled(string noteId, bool isTaskList)
+    {
+        var ctrl = NotesCanvas.Children.OfType<NoteControl>().FirstOrDefault(c => c.NoteId == noteId);
+        if (ctrl is null) return;
+        _vm.UpdateNoteMetaAsync(noteId, ctrl.Tags, ctrl.ReminderAt, isTaskList);
+    }
+
+    private void OnNoteMetaChanged(string noteId, string? tags, DateTime? reminderAt)
+    {
+        _vm.UpdateNoteMetaAsync(noteId, tags, reminderAt, isTaskList: null);
+    }
+
     private async void OnNoteDeleteClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is NoteControl nc)
+        if (sender is not NoteControl nc) return;
+
+        if (_vm.IsOwner)
         {
-            await _vm.DeleteNoteAsync(nc.NoteId);
+            var confirm = MessageBox.Show(
+                "¿Estás seguro de eliminar esta nota? Esta acción no se puede deshacer.",
+                "Eliminar nota",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (confirm != MessageBoxResult.Yes) return;
         }
+        else
+        {
+            var confirm = MessageBox.Show(
+                "Como miembro, eliminar una nota requiere la aprobación del propietario.\nSe enviará una solicitud al owner. ¿Continuar?",
+                "Eliminar nota",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes) return;
+        }
+
+        await _vm.DeleteNoteAsync(nc.NoteId);
+    }
+
+    private async void OnNoteArchiveClicked(string noteId)
+    {
+        var ctrl = NotesCanvas.Children.OfType<NoteControl>().FirstOrDefault(c => c.NoteId == noteId);
+        if (ctrl is null) return;
+
+        if (ctrl.IsArchived)
+        {
+            // Restaurar directamente (todos los miembros pueden restaurar)
+            await _vm.UnarchiveNoteAsync(noteId);
+            return;
+        }
+
+        if (!_vm.IsOwner)
+        {
+            var confirm = MessageBox.Show(
+                "Como miembro, archivar una nota requiere la aprobación del propietario.\nSe enviará una solicitud al owner. ¿Continuar?",
+                "Archivar nota",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes) return;
+        }
+
+        await _vm.ArchiveNoteAsync(noteId);
     }
 
     private void OnNotePinToggled(string noteId, bool isPinned)
@@ -257,20 +375,41 @@ public partial class StickyBoardView : UserControl
 
     private void ShowColorPicker()
     {
+        var palette = new StackPanel();
+        palette.Children.Add(CreateColorPalette());
+
+        var cancelBtn = new Button
+        {
+            Content = "✕ Cancelar",
+            Margin = new Thickness(0, 8, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Padding = new Thickness(14, 5, 14, 5),
+            FontSize = 12,
+            Cursor = Cursors.Hand,
+            Background = new SolidColorBrush(Color.FromRgb(0xF1, 0xF5, 0xF9)),
+            BorderThickness = new Thickness(0),
+            Foreground = new SolidColorBrush(Color.FromRgb(0x64, 0x74, 0x8B))
+        };
+        cancelBtn.Click += (_, _) => HideColorPicker();
+        palette.Children.Add(cancelBtn);
+
+        var inner = new Border
+        {
+            Width = 300,
+            Background = Brushes.White,
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(8),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = palette,
+        };
+
         _colorPickerOverlay = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(40, 0, 0, 0)),
-            Child = new Border
-            {
-                Width = 300, Height = 60,
-                Background = Brushes.White,
-                CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(8),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Child = CreateColorPalette(),
-            }
+            Child = inner
         };
+        _colorPickerOverlay.MouseLeftButtonDown += (_, _) => HideColorPicker();
         Grid.SetRow(_colorPickerOverlay, 1);
         ((Grid)Content).Children.Add(_colorPickerOverlay);
     }
@@ -526,5 +665,245 @@ public partial class StickyBoardView : UserControl
                 await _vm.RevokeInvitationAsync(inv.Id);
             }
         }
+    }
+
+    // ── Mover nota a otro proyecto (drag & drop al sidebar) ──
+
+    private void ShowMoveSidebar()
+    {
+        if (_vm is null || _vm.Projects.Count <= 1 || _dragNote is null)
+            return;
+
+        MoveProjectPanel.Children.Clear();
+        var currentProjectId = _vm.ProjectId;
+        foreach (var p in _vm.Projects)
+        {
+            if (p.Id == currentProjectId) continue;
+
+            var btn = new Button
+            {
+                Content = $"📋 {p.Name}",
+                Tag = p.Id,
+                Margin = new Thickness(12, 4, 12, 4),
+                Padding = new Thickness(12, 9, 12, 9),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                FontSize = 12,
+                Cursor = Cursors.Hand,
+                Background = new SolidColorBrush(Color.FromRgb(0xF1, 0xF5, 0xF9)),
+                BorderThickness = new Thickness(0),
+                Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x42, 0x55))
+            };
+            btn.Click += MoveProjectButton_Click;
+            MoveProjectPanel.Children.Add(btn);
+        }
+
+        MoveSidebarOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void HideMoveSidebar()
+    {
+        MoveSidebarOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private string? GetProjectUnderPointer(Point posInSidebar)
+    {
+        if (MoveSidebarOverlay.Visibility != Visibility.Visible)
+            return null;
+
+        foreach (var child in MoveProjectPanel.Children)
+        {
+            if (child is Button btn)
+            {
+                var btnPos = btn.TranslatePoint(new Point(0, 0), MoveSidebarOverlay);
+                if (new Rect(btnPos, btn.RenderSize).Contains(posInSidebar))
+                    return btn.Tag as string;
+            }
+        }
+        return null;
+    }
+
+    private async void MoveProjectButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string projectId && _dragNote is not null)
+        {
+            var noteId = _dragNote.NoteId;
+            _isDragging = false;
+            _dragNote.ReleaseMouseCapture();
+            HideMoveSidebar();
+            await _vm.MoveNoteToProjectAsync(noteId, projectId);
+            _dragNote = null;
+        }
+    }
+
+    // ── Archivo (ver notas archivadas) ──
+
+    private async void ArchiveFilterButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm is null) return;
+        _vm.ShowArchived = !_vm.ShowArchived;
+        ArchiveFilterButton.Content = _vm.ShowArchived ? "📂" : "🗄️";
+        ArchiveFilterButton.ToolTip = _vm.ShowArchived ? "Mostrar notas activas" : "Ver notas archivadas";
+        await _vm.LoadNotesAsync();
+    }
+
+    // ── Renombrar proyecto ──
+
+    private void RenameProjectButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm is null) return;
+        RenameProjectInput.Text = _vm.ProjectName;
+        RenameOverlay.Visibility = Visibility.Visible;
+        RenameProjectInput.Focus();
+        RenameProjectInput.SelectAll();
+    }
+
+    private async void SaveRename_Click(object sender, RoutedEventArgs e)
+    {
+        var ok = await _vm.RenameProjectAsync(RenameProjectInput.Text);
+        if (ok)
+            RenameOverlay.Visibility = Visibility.Collapsed;
+        else
+            MessageBox.Show("No se pudo renombrar el proyecto.", "Renombrar proyecto",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
+
+    private void RenameProjectInput_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            SaveRename_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            CloseRename_Click(sender, e);
+            e.Handled = true;
+        }
+    }
+
+    private void CloseRename_Click(object sender, RoutedEventArgs e)
+    {
+        RenameOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    // ── Solicitudes de aprobación (owner) ──
+
+    private async void ApprovalsButton_Click(object sender, RoutedEventArgs e)
+    {
+        await _vm.LoadActionRequestsAsync();
+        ApprovalsList.ItemsSource = null;
+        ApprovalsList.ItemsSource = _vm.ActionRequests;
+        var pendingCount = _vm.ActionRequests.Count(r => r.Status == "Pending");
+        ApprovalsTitle.Text = $"Solicitudes pendientes ({pendingCount})";
+        ApprovalsOverlay.Visibility = Visibility.Visible;
+    }
+
+    private async void ApproveRequest_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string requestId)
+        {
+            await _vm.ApproveActionRequestAsync(requestId);
+            await ReloadApprovalsAsync();
+        }
+    }
+
+    private async void RejectRequest_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string requestId)
+        {
+            await _vm.RejectActionRequestAsync(requestId);
+            await ReloadApprovalsAsync();
+        }
+    }
+
+    private async Task ReloadApprovalsAsync()
+    {
+        await _vm.LoadActionRequestsAsync();
+        ApprovalsList.ItemsSource = null;
+        ApprovalsList.ItemsSource = _vm.ActionRequests;
+        var pendingCount = _vm.ActionRequests.Count(r => r.Status == "Pending");
+        ApprovalsTitle.Text = $"Solicitudes pendientes ({pendingCount})";
+    }
+
+    private void CloseApprovals_Click(object sender, RoutedEventArgs e)
+    {
+        ApprovalsOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    // ── Notificación de recordatorio ──
+
+    private void ShowReminderToast(NoteItem note)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            var toast = new Window
+            {
+                Title = "Recordatorio",
+                Width = 320,
+                SizeToContent = SizeToContent.Height,
+                WindowStyle = WindowStyle.ToolWindow,
+                ResizeMode = ResizeMode.NoResize,
+                ShowInTaskbar = false,
+                Topmost = true,
+                WindowStartupLocation = WindowStartupLocation.Manual,
+                Left = SystemParameters.WorkArea.Right - 350,
+                Top = SystemParameters.WorkArea.Bottom - 160,
+                Background = (Brush)FindResource("BgGradientWarm"),
+                Content = new Border
+                {
+                    Padding = new Thickness(16),
+                    Child = new StackPanel
+                    {
+                        Children =
+                        {
+                            new TextBlock
+                            {
+                                Text = "⏰ Recordatorio",
+                                FontSize = 13,
+                                FontWeight = FontWeights.SemiBold,
+                                Foreground = (Brush)FindResource("BrandBlueBrush")
+                            },
+                            new TextBlock
+                            {
+                                Text = string.IsNullOrWhiteSpace(note.Title) ? "(Sin título)" : note.Title,
+                                FontSize = 14,
+                                FontWeight = FontWeights.SemiBold,
+                                Margin = new Thickness(0, 6, 0, 0),
+                                TextWrapping = TextWrapping.Wrap
+                            },
+                            new TextBlock
+                            {
+                                Text = StripHtml(note.Content ?? string.Empty),
+                                FontSize = 12,
+                                Foreground = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55)),
+                                Margin = new Thickness(0, 4, 0, 0),
+                                TextWrapping = TextWrapping.Wrap,
+                                MaxHeight = 60
+                            }
+                        }
+                    }
+                }
+            };
+
+            toast.Show();
+
+            var closeTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(8)
+            };
+            closeTimer.Tick += (_, _) =>
+            {
+                closeTimer.Stop();
+                toast.Close();
+            };
+            closeTimer.Start();
+        });
+    }
+
+    private static string StripHtml(string html)
+    {
+        var decoded = System.Net.WebUtility.HtmlDecode(html);
+        return System.Text.RegularExpressions.Regex.Replace(decoded, "<[^>]+>", string.Empty);
     }
 }

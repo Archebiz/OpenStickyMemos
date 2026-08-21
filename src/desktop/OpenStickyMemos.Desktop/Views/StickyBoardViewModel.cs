@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using OpenStickyMemos.Desktop.Services;
 using OpenStickyMemos.Desktop.ViewModels;
+using System.Collections.ObjectModel;
 
 namespace OpenStickyMemos.Desktop.ViewModels;
 
@@ -20,6 +21,14 @@ public class NoteItem
     public double Height { get; set; } = 180;
     public bool IsPinned { get; set; }
     public int ZIndex { get; set; }
+    public bool IsArchived { get; set; }
+    public bool PendingArchive { get; set; }
+    public bool PendingDelete { get; set; }
+    public bool IsOwner { get; set; }
+    public bool IsTaskList { get; set; }
+    public string? Tags { get; set; }
+    public DateTime? ReminderAt { get; set; }
+    public bool ReminderTriggered { get; set; }
     public string? AuthorName { get; set; }
 }
 
@@ -33,10 +42,27 @@ public class StickyBoardViewModel : BaseViewModel
 
     private string _projectId = string.Empty;
     private string _projectName = string.Empty;
+    private string _projectDescription = string.Empty;
+    private string _currentUserId = string.Empty;
+    private string _projectOwnerId = string.Empty;
+    private bool _isOwner;
+    private bool _showArchived;
     private readonly Dictionary<string, NoteItem> _notes = new();
 
     public string ProjectName => _projectName;
+    public string ProjectId => _projectId;
+    public bool IsOwner => _isOwner;
+    public bool ShowArchived
+    {
+        get => _showArchived;
+        set { if (_showArchived != value) { _showArchived = value; OnPropertyChanged(); } }
+    }
+
+    public ObservableCollection<ProjectResponse> Projects { get; } = new();
+    public ObservableCollection<NoteActionRequestResponse> ActionRequests { get; } = new();
+
     private readonly System.Timers.Timer _debounceTimer;
+    private readonly System.Timers.Timer _reminderTimer;
     private string? _pendingNoteId;
     private string? _pendingTitle;
     private string? _pendingContent;
@@ -45,6 +71,9 @@ public class StickyBoardViewModel : BaseViewModel
     public event Action<NoteItem>? NoteAdded;
     public event Action<NoteItem>? NoteUpdated;
     public event Action<string>? NoteRemoved;
+    public event Action? BoardCleared;
+    public event Action? ActionRequestsChanged;
+    public event Action<NoteItem>? ReminderDue;
 
     public StickyBoardViewModel(
         IApiService api,
@@ -63,6 +92,36 @@ public class StickyBoardViewModel : BaseViewModel
         // Debounce timer (300ms)
         _debounceTimer = new System.Timers.Timer(300) { AutoReset = false };
         _debounceTimer.Elapsed += (_, _) => FlushPendingContent();
+
+        // Timer de recordatorios (cada 15s revisa notas vencidas)
+        _reminderTimer = new System.Timers.Timer(15000) { AutoReset = true };
+        _reminderTimer.Elapsed += (_, _) => CheckReminders();
+    }
+
+    private void CheckReminders()
+    {
+        var now = DateTime.UtcNow;
+        List<NoteItem>? due = null;
+        foreach (var note in _notes.Values)
+        {
+            if (!note.ReminderTriggered && note.ReminderAt.HasValue && note.ReminderAt.Value <= now)
+            {
+                note.ReminderTriggered = true;
+                due ??= new List<NoteItem>();
+                due.Add(note);
+            }
+        }
+
+        if (due is null) return;
+
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        foreach (var note in due)
+        {
+            if (dispatcher is null || dispatcher.CheckAccess())
+                ReminderDue?.Invoke(note);
+            else
+                dispatcher.Invoke(() => ReminderDue?.Invoke(note));
+        }
     }
 
     public async Task LoadBoardAsync()
@@ -85,20 +144,25 @@ public class StickyBoardViewModel : BaseViewModel
                 _projectId = projects[0].Id;
             }
 
-            // Obtener nombre del proyecto
+            // Obtener nombre del proyecto y owner
             var project = await _api.GetProjectAsync(_projectId);
             _projectName = project?.Name ?? "Sin nombre";
+            _projectDescription = project?.Description ?? string.Empty;
+            _projectOwnerId = project?.OwnerId ?? string.Empty;
             OnPropertyChanged(nameof(ProjectName));
 
+            _currentUserId = _auth.CurrentUser?.Id ?? string.Empty;
+            _isOwner = !string.IsNullOrEmpty(_currentUserId) && _currentUserId == _projectOwnerId;
+            OnPropertyChanged(nameof(IsOwner));
+
+            // Cargar todos los proyectos del usuario (para mover notas y renombrar)
+            await LoadProjectsAsync();
+
             // Cargar notas
-            var notes = await _api.GetNotesAsync(_projectId);
-            _notes.Clear();
-            foreach (var n in notes)
-            {
-                var item = MapToItem(n);
-                _notes[item.Id] = item;
-                NoteAdded?.Invoke(item);
-            }
+            await LoadNotesAsync();
+
+            // Cargar solicitudes pendientes (el owner ve todas; un miembro las propias)
+            await LoadActionRequestsAsync();
 
             // Conectar SignalR y escuchar eventos
             await _signalR.StartAsync();
@@ -107,11 +171,46 @@ public class StickyBoardViewModel : BaseViewModel
             _signalR.NoteCreated += OnRemoteNoteCreated;
             _signalR.NoteUpdated += OnRemoteNoteUpdated;
             _signalR.NoteDeleted += OnRemoteNoteDeleted;
+            _signalR.ActionRequestCreated += OnActionRequestChanged;
+            _signalR.ActionRequestResolved += OnActionRequestChanged;
+
+            // Iniciar chequeo de recordatorios
+            _reminderTimer.Start();
         }
         finally
         {
             IsLoading = false;
         }
+    }
+
+    private async Task LoadProjectsAsync()
+    {
+        var projects = await _api.GetProjectsAsync();
+        Projects.Clear();
+        foreach (var p in projects)
+            Projects.Add(p);
+    }
+
+    public async Task LoadNotesAsync()
+    {
+        var notes = await _api.GetNotesAsync(_projectId, ShowArchived);
+        _notes.Clear();
+        BoardCleared?.Invoke();
+        foreach (var n in notes)
+        {
+            var item = MapToItem(n);
+            _notes[item.Id] = item;
+            NoteAdded?.Invoke(item);
+        }
+    }
+
+    public async Task LoadActionRequestsAsync()
+    {
+        ActionRequests.Clear();
+        var requests = await _api.GetActionRequestsAsync(_projectId);
+        foreach (var r in requests)
+            ActionRequests.Add(r);
+        ActionRequestsChanged?.Invoke();
     }
 
     public async Task<NoteItem?> CreateNoteAsync(double positionX, double positionY, string color)
@@ -137,6 +236,13 @@ public class StickyBoardViewModel : BaseViewModel
             existing.Height = item.Height;
             existing.IsPinned = item.IsPinned;
             existing.ZIndex = item.ZIndex;
+            existing.IsArchived = item.IsArchived;
+            existing.PendingArchive = item.PendingArchive;
+            existing.PendingDelete = item.PendingDelete;
+            existing.IsOwner = item.IsOwner;
+            existing.IsTaskList = item.IsTaskList;
+            existing.Tags = item.Tags;
+            existing.ReminderAt = item.ReminderAt;
             existing.AuthorName = item.AuthorName;
             NoteUpdated?.Invoke(existing);
         }
@@ -149,14 +255,86 @@ public class StickyBoardViewModel : BaseViewModel
         return item;
     }
 
-    public async Task DeleteNoteAsync(string noteId)
+    public async Task<NoteActionResponse?> DeleteNoteAsync(string noteId)
     {
-        var deleted = await _api.DeleteNoteAsync(_projectId, noteId);
-        if (deleted)
+        var result = await _api.DeleteNoteAsync(_projectId, noteId);
+        if (result is not null)
+        {
+            if (result.Deleted)
+            {
+                _notes.Remove(noteId);
+                NoteRemoved?.Invoke(noteId);
+            }
+            else if (result.RequestCreated && result.Note is not null)
+            {
+                // Miembro: la nota queda marcada como pendiente de aprobación del owner
+                OnRemoteNoteUpdated(result.Note);
+                await LoadActionRequestsAsync();
+            }
+        }
+        return result;
+    }
+
+    public async Task<NoteActionResponse?> ArchiveNoteAsync(string noteId)
+    {
+        var result = await _api.ArchiveNoteAsync(_projectId, noteId);
+        if (result is not null)
+        {
+            if (result.Note is not null)
+                OnRemoteNoteUpdated(result.Note);
+            if (result.RequestCreated)
+                await LoadActionRequestsAsync();
+        }
+        return result;
+    }
+
+    public async Task<NoteActionResponse?> UnarchiveNoteAsync(string noteId)
+    {
+        var result = await _api.UnarchiveNoteAsync(_projectId, noteId);
+        if (result?.Note is not null)
+            OnRemoteNoteUpdated(result.Note);
+        return result;
+    }
+
+    public async Task<NoteResponse?> MoveNoteToProjectAsync(string noteId, string targetProjectId)
+    {
+        if (string.IsNullOrEmpty(targetProjectId) || targetProjectId == _projectId)
+            return null;
+
+        var result = await _api.MoveNoteAsync(_projectId, noteId, targetProjectId);
+        if (result is not null)
         {
             _notes.Remove(noteId);
             NoteRemoved?.Invoke(noteId);
         }
+        return result;
+    }
+
+    public async Task<bool> ApproveActionRequestAsync(string requestId)
+    {
+        var ok = await _api.ApproveActionRequestAsync(_projectId, requestId);
+        if (ok) await LoadActionRequestsAsync();
+        return ok;
+    }
+
+    public async Task<bool> RejectActionRequestAsync(string requestId)
+    {
+        var ok = await _api.RejectActionRequestAsync(_projectId, requestId);
+        if (ok) await LoadActionRequestsAsync();
+        return ok;
+    }
+
+    public async Task<bool> RenameProjectAsync(string newName)
+    {
+        if (string.IsNullOrWhiteSpace(newName)) return false;
+        var result = await _api.UpdateProjectAsync(_projectId, newName.Trim(), _projectDescription);
+        if (result is not null)
+        {
+            _projectName = result.Name;
+            OnPropertyChanged(nameof(ProjectName));
+            return true;
+        }
+        return false;
     }
 
     public void UpdateNotePosition(string noteId, double x, double y)
@@ -216,6 +394,30 @@ public class StickyBoardViewModel : BaseViewModel
         _debounceTimer.Start();
     }
 
+    /// <summary>
+    /// Actualiza atributos de la nota (modo tareas, etiquetas y recordatorio) y guarda.
+    /// Si reminderAt es null, se limpia el recordatorio (clearReminder=true).
+    /// </summary>
+    public void UpdateNoteMetaAsync(string noteId, string? tags, DateTime? reminderAt, bool? isTaskList)
+    {
+        if (!_notes.TryGetValue(noteId, out var note)) return;
+
+        note.Tags = string.IsNullOrWhiteSpace(tags) ? null : tags;
+        note.ReminderAt = reminderAt;
+        note.ReminderTriggered = false;
+        if (isTaskList.HasValue) note.IsTaskList = isTaskList.Value;
+
+        var request = new Dictionary<string, object?>
+        {
+            ["tags"] = note.Tags,
+            ["reminderAt"] = reminderAt,
+            ["isTaskList"] = note.IsTaskList,
+            ["clearReminder"] = reminderAt is null
+        };
+        _ = _api.UpdateNoteAsync(_projectId, noteId, request);
+        NoteUpdated?.Invoke(note);
+    }
+
     private void FlushPendingContent()
     {
         if (_pendingNoteId is null) return;
@@ -230,6 +432,10 @@ public class StickyBoardViewModel : BaseViewModel
     public void GoBack()
     {
         _signalR.LeaveProjectAsync(_projectId);
+        _signalR.ActionRequestCreated -= OnActionRequestChanged;
+        _signalR.ActionRequestResolved -= OnActionRequestChanged;
+        _reminderTimer.Stop();
+        _reminderTimer.Dispose();
         _debounceTimer.Dispose();
         _navigation.GoBack();
     }
@@ -300,6 +506,15 @@ public class StickyBoardViewModel : BaseViewModel
     private void OnRemoteNoteUpdated(NoteResponse note)
     {
         if (note.ProjectId != _projectId) return;
+
+        // Si la nota fue archivada y no estamos viendo el archivo, quitarla del board
+        if (note.IsArchived && !ShowArchived)
+        {
+            if (_notes.Remove(note.Id))
+                NoteRemoved?.Invoke(note.Id);
+            return;
+        }
+
         if (!_notes.TryGetValue(note.Id, out var item)) return;
 
         item.Title = note.Title;
@@ -311,6 +526,14 @@ public class StickyBoardViewModel : BaseViewModel
         item.Height = note.Height;
         item.IsPinned = note.IsPinned;
         item.ZIndex = note.ZIndex;
+        item.IsArchived = note.IsArchived;
+        item.PendingArchive = note.PendingArchive;
+        item.PendingDelete = note.PendingDelete;
+        item.IsOwner = note.IsOwner;
+        item.IsTaskList = note.IsTaskList;
+        item.Tags = note.Tags;
+        item.ReminderAt = note.ReminderAt;
+        item.ReminderTriggered = false;
 
         NoteUpdated?.Invoke(item);
     }
@@ -320,6 +543,19 @@ public class StickyBoardViewModel : BaseViewModel
         if (projectId != _projectId) return;
         _notes.Remove(noteId);
         NoteRemoved?.Invoke(noteId);
+    }
+
+    private void OnActionRequestChanged(NoteActionRequestResponse request)
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess())
+        {
+            _ = LoadActionRequestsAsync();
+        }
+        else
+        {
+            dispatcher.InvokeAsync(async () => await LoadActionRequestsAsync());
+        }
     }
 
     // ── Helpers ──
@@ -337,6 +573,13 @@ public class StickyBoardViewModel : BaseViewModel
         Height = n.Height,
         IsPinned = n.IsPinned,
         ZIndex = n.ZIndex,
+        IsArchived = n.IsArchived,
+        PendingArchive = n.PendingArchive,
+        PendingDelete = n.PendingDelete,
+        IsOwner = n.IsOwner,
+        IsTaskList = n.IsTaskList,
+        Tags = n.Tags,
+        ReminderAt = n.ReminderAt,
         AuthorName = n.AuthorName,
     };
 }

@@ -19,13 +19,13 @@ public class NotesController : ControllerBase
     }
 
     /// <summary>
-    /// GET /api/projects/{projectId}/notes — Lista las notas de un proyecto
+    /// GET /api/projects/{projectId}/notes?includeArchived=true — Lista las notas de un proyecto
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll(Guid projectId)
+    public async Task<IActionResult> GetAll(Guid projectId, [FromQuery] bool includeArchived = false)
     {
         var userId = GetUserId();
-        var notes = await _noteService.GetProjectNotesAsync(projectId, userId);
+        var notes = await _noteService.GetProjectNotesAsync(projectId, userId, includeArchived);
         return Ok(notes);
     }
 
@@ -90,16 +90,124 @@ public class NotesController : ControllerBase
     }
 
     /// <summary>
-    /// DELETE /api/projects/{projectId}/notes/{noteId} — Elimina una nota
+    /// DELETE /api/projects/{projectId}/notes/{noteId} — Elimina una nota.
+    /// El owner la elimina directamente; un miembro crea una solicitud que el owner debe aprobar.
     /// </summary>
     [HttpDelete("{noteId:guid}")]
     public async Task<IActionResult> Delete(Guid projectId, Guid noteId)
     {
         var userId = GetUserId();
-        var deleted = await _noteService.DeleteAsync(noteId, userId);
+        var result = await _noteService.DeleteAsync(noteId, userId);
 
-        if (!deleted)
-            return NotFound(new { error = "Nota no encontrada o no tienes acceso" });
+        if (result.Deleted)
+            return NoContent();
+
+        if (result.RequestCreated)
+            return Accepted(result);
+
+        return NotFound(new { error = result.Message });
+    }
+
+    /// <summary>
+    /// POST /api/projects/{projectId}/notes/{noteId}/archive — Archiva una nota.
+    /// El owner la archiva directamente; un miembro solicita aprobación al owner.
+    /// </summary>
+    [HttpPost("{noteId:guid}/archive")]
+    public async Task<IActionResult> Archive(Guid projectId, Guid noteId)
+    {
+        var userId = GetUserId();
+        var result = await _noteService.ArchiveAsync(noteId, userId);
+
+        if (result.Note is null && !result.RequestCreated)
+            return NotFound(new { error = result.Message });
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// POST /api/projects/{projectId}/notes/{noteId}/unarchive — Restaura una nota archivada.
+    /// </summary>
+    [HttpPost("{noteId:guid}/unarchive")]
+    public async Task<IActionResult> Unarchive(Guid projectId, Guid noteId)
+    {
+        var userId = GetUserId();
+        var result = await _noteService.UnarchiveAsync(noteId, userId);
+
+        if (result.Note is null)
+            return NotFound(new { error = result.Message });
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// PATCH /api/projects/{projectId}/notes/{noteId}/move — Mueve una nota a otro proyecto
+    /// (requiere ser miembro del proyecto origen y destino).
+    /// </summary>
+    [HttpPatch("{noteId:guid}/move")]
+    public async Task<IActionResult> Move(Guid projectId, Guid noteId, [FromBody] MoveNoteRequest request)
+    {
+        var userId = GetUserId();
+        var note = await _noteService.MoveAsync(noteId, request.TargetProjectId, userId);
+
+        if (note is null)
+            return BadRequest(new { error = "No se pudo mover la nota. Debes ser miembro de ambos proyectos." });
+
+        return Ok(note);
+    }
+
+    /// <summary>
+    /// GET /api/projects/{projectId}/notes/requests — Lista solicitudes de archivo/eliminación.
+    /// El owner ve todas; un miembro ve solo las propias.
+    /// </summary>
+    [HttpGet("requests")]
+    public async Task<IActionResult> GetActionRequests(Guid projectId)
+    {
+        var userId = GetUserId();
+        var requests = await _noteService.GetActionRequestsAsync(projectId, userId);
+        return Ok(requests);
+    }
+
+    /// <summary>
+    /// POST /api/projects/{projectId}/notes/requests/{requestId}/approve — Aprobación del owner
+    /// </summary>
+    [HttpPost("requests/{requestId:guid}/approve")]
+    public async Task<IActionResult> ApproveActionRequest(Guid projectId, Guid requestId)
+    {
+        var userId = GetUserId();
+        var approved = await _noteService.ApproveActionRequestAsync(requestId, userId);
+
+        if (!approved)
+            return BadRequest(new { error = "No se pudo aprobar la solicitud" });
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// POST /api/projects/{projectId}/notes/requests/{requestId}/reject — Rechazo del owner
+    /// </summary>
+    [HttpPost("requests/{requestId:guid}/reject")]
+    public async Task<IActionResult> RejectActionRequest(Guid projectId, Guid requestId)
+    {
+        var userId = GetUserId();
+        var rejected = await _noteService.RejectActionRequestAsync(requestId, userId);
+
+        if (!rejected)
+            return BadRequest(new { error = "No se pudo rechazar la solicitud" });
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// POST /api/projects/{projectId}/notes/requests/{requestId}/cancel — Cancela la propia solicitud
+    /// </summary>
+    [HttpPost("requests/{requestId:guid}/cancel")]
+    public async Task<IActionResult> CancelActionRequest(Guid projectId, Guid requestId)
+    {
+        var userId = GetUserId();
+        var cancelled = await _noteService.CancelActionRequestAsync(requestId, userId);
+
+        if (!cancelled)
+            return BadRequest(new { error = "No se pudo cancelar la solicitud" });
 
         return NoContent();
     }
