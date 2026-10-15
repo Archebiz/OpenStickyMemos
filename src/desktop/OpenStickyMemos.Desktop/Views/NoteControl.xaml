@@ -188,7 +188,7 @@
 
                 <!-- Placeholder for empty notes -->
                 <TextBlock x:Name="EmptyPlaceholder" Grid.Row="2"
-                           Text="Doble click para editar"
+                           Text="Escribe algo aquí..."
                            FontSize="11" FontStyle="Italic"
                            Foreground="#A0A0A0"
                            TextWrapping="Wrap"
@@ -227,7 +227,8 @@
                              Background="Transparent" BorderThickness="0"
                              Padding="6,4" TextWrapping="Wrap"
                              AcceptsReturn="False" Foreground="#333"
-                             LostFocus="TitleBox_LostFocus"/>
+                             LostFocus="TitleBox_LostFocus"
+                             KeyDown="Editor_KeyDown"/>
                 </Border>
                 <Border Grid.Row="1" BorderBrush="#D0D0D0" BorderThickness="1"
                         CornerRadius="5" Background="#FFFFFFB0" MinHeight="50">
@@ -276,7 +277,8 @@
                                      VerticalScrollBarVisibility="Auto"
                                      AcceptsTab="True"
                                      MinHeight="40"
-                                     LostFocus="RichEditor_LostFocus"/>
+                                     LostFocus="RichEditor_LostFocus"
+                                     KeyDown="Editor_KeyDown"/>
 
                         <!-- Editor de lista de tareas (modo checklist) -->
                         <ScrollViewer x:Name="TaskEditorScroll" Visibility="Collapsed"

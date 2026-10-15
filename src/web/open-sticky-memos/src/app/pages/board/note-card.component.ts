@@ -56,14 +56,15 @@ export interface NoteCardData {
       [class.archived]="note.isArchived"
       (mousedown)="onMouseDown($event)"
       (touchstart)="onTouchStart($event)"
+      (click)="onCardClick($event)"
       (dblclick)="startEdit()"
     >
       <!-- Resize handle -->
-      <div class="resize-handle" (mousedown)="onResizeStart($event)" (touchstart)="onResizeTouchStart($event)"></div>
+      <div class="resize-handle" (mousedown)="onResizeStart($event)" (touchstart)="onResizeTouchStart($event)" title="Arrastrar para redimensionar"></div>
 
       <!-- Pin indicator (top-left) -->
-      @if (note.isPinned) {
-        <span class="pin">📌</span>
+      @if (note.isPinned && !isEditing) {
+        <span class="pin" title="Nota fijada">📌</span>
       }
 
       <!-- Badge de pendiente de aprobación -->
@@ -71,40 +72,52 @@ export interface NoteCardData {
         <div class="pending-badge">⏳ Pendiente de aprobación</div>
       }
 
-      <!-- Action buttons (top-right) -->
-      <div class="note-actions">
-        <button class="action-btn" (click)="bringToFront()" title="Traer al frente">⬆</button>
-        <button class="action-btn" (click)="sendToBack()" title="Enviar al fondo">⬇</button>
-        <button
-          class="action-btn"
-          (click)="toggleArchive()"
-          [title]="note.isArchived ? 'Restaurar nota' : 'Archivar nota'"
-        >
-          {{ note.isArchived ? '📥' : '🗄️' }}
-        </button>
-        <button class="delete-btn" (click)="deleteNote.emit(note.id); $event.stopPropagation()" title="Eliminar nota">×</button>
-      </div>
+      <!-- Action buttons (top-right, on hover) -->
+      @if (!isEditing) {
+        <div class="note-actions">
+          <button
+            class="action-btn"
+            [class.active]="note.isPinned"
+            (click)="togglePin(); $event.stopPropagation()"
+            [title]="note.isPinned ? 'Desfijar nota' : 'Fijar nota'"
+          >
+            📌
+          </button>
+          <button class="action-btn" (click)="bringToFront(); $event.stopPropagation()" title="Traer al frente">⬆</button>
+          <button class="action-btn" (click)="sendToBack(); $event.stopPropagation()" title="Enviar al fondo">⬇</button>
+          <button
+            class="action-btn"
+            (click)="toggleArchive(); $event.stopPropagation()"
+            [title]="note.isArchived ? 'Restaurar de archivadas' : 'Archivar nota'"
+          >
+            {{ note.isArchived ? '📥' : '🗄️' }}
+          </button>
+          <button class="action-btn delete-btn" (click)="deleteNote.emit(note.id); $event.stopPropagation()" title="Eliminar nota">✕</button>
+        </div>
+      }
 
       @if (isEditing) {
-        <div class="edit-mode">
+        <div class="edit-mode" (click)="$event.stopPropagation()">
           <input
             #titleInput
             class="edit-title"
             [value]="editTitle"
             (input)="editTitle = $any($event.target).value"
-            placeholder="Título"
+            placeholder="Título (opcional)"
             (keydown.escape)="cancelEdit()"
+            (keydown.control.enter)="saveEdit()"
+            (keydown.meta.enter)="saveEdit()"
           />
           <div class="format-toolbar">
-            <button type="button" (mousedown)="$event.preventDefault()" (click)="execCmd('bold')" title="Negrita"><b>B</b></button>
-            <button type="button" (mousedown)="$event.preventDefault()" (click)="execCmd('italic')" title="Cursiva"><i>I</i></button>
-            <button type="button" (mousedown)="$event.preventDefault()" (click)="execCmd('underline')" title="Subrayado"><u>U</u></button>
+            <button type="button" (mousedown)="$event.preventDefault()" (click)="execCmd('bold')" title="Negrita (Ctrl+B)"><b>B</b></button>
+            <button type="button" (mousedown)="$event.preventDefault()" (click)="execCmd('italic')" title="Cursiva (Ctrl+I)"><i>I</i></button>
+            <button type="button" (mousedown)="$event.preventDefault()" (click)="execCmd('underline')" title="Subrayado (Ctrl+U)"><u>U</u></button>
             <button type="button" (mousedown)="$event.preventDefault()" (click)="execCmd('insertUnorderedList')" title="Lista con viñetas">•</button>
-            <button type="button" (mousedown)="$event.preventDefault()" (click)="toggleEmoji()" title="Emoji">😊</button>
+            <button type="button" (mousedown)="$event.preventDefault()" (click)="toggleEmoji()" title="Insertar emoji">😊</button>
             <span class="toolbar-sep"></span>
-            <button type="button" (mousedown)="$event.preventDefault()" (click)="toggleTaskMode()" [class.active]="editTaskList" title="Lista de tareas (checklist)">☑</button>
-            <button type="button" (mousedown)="$event.preventDefault()" (click)="toggleTagsEditor()" title="Etiquetas">🏷</button>
-            <button type="button" (mousedown)="$event.preventDefault()" (click)="toggleReminderEditor()" title="Recordatorio">🔔</button>
+            <button type="button" (mousedown)="$event.preventDefault()" (click)="toggleTaskMode()" [class.active]="editTaskList" title="Modo checklist / tareas">☑</button>
+            <button type="button" (mousedown)="$event.preventDefault()" (click)="toggleTagsEditor()" [class.active]="showTagsEditor" title="Etiquetas">🏷</button>
+            <button type="button" (mousedown)="$event.preventDefault()" (click)="toggleReminderEditor()" [class.active]="showReminderEditor" title="Recordatorio">🔔</button>
           </div>
 
           @if (editTaskList) {
@@ -132,13 +145,15 @@ export interface NoteCardData {
               contenteditable="true"
               [innerHTML]="editContent"
               (keydown.escape)="cancelEdit()"
+              (keydown.control.enter)="saveEdit()"
+              (keydown.meta.enter)="saveEdit()"
             ></div>
           }
 
           @if (showTagsEditor) {
             <div class="meta-editor">
               <input class="meta-input" [value]="editTags" (input)="editTags = $any($event.target).value" (keyup.enter)="applyTags()" placeholder="Etiquetas (separadas por coma)" />
-              <button type="button" class="btn-sm" (click)="applyTags()">Aplicar</button>
+              <button type="button" class="btn-sm" (click)="applyTags()">Listo</button>
             </div>
           }
           @if (showReminderEditor) {
@@ -157,20 +172,13 @@ export interface NoteCardData {
                   [style.background]="c"
                   [class.selected]="c === editColor"
                   (click)="editColor = c"
+                  title="Cambiar color"
                 ></button>
               }
             </div>
             <div class="action-btns">
-              <button
-                class="pin-btn"
-                [class.active]="editPinned"
-                (click)="editPinned = !editPinned"
-                title="Fijar nota"
-              >
-                📌
-              </button>
-              <button class="cancel-btn" (click)="cancelEdit()" title="Cancelar edición">✕</button>
-              <button class="save-btn" (click)="saveEdit()" title="Guardar">✓</button>
+              <button class="cancel-btn" (click)="cancelEdit()" title="Descartar cambios [Esc]">Cancelar</button>
+              <button class="save-btn" (click)="saveEdit()" title="Guardar nota [Ctrl+Enter]">Guardar</button>
             </div>
           </div>
         </div>
@@ -192,14 +200,14 @@ export interface NoteCardData {
                   <span class="task-text">{{ task.text }}</span>
                 </label>
               } @empty {
-                <p class="note-placeholder">Sin tareas</p>
+                <p class="note-placeholder">Sin tareas. Clic para editar</p>
               }
             </div>
           } @else {
             @if (note.content) {
               <div class="note-content" [innerHTML]="note.content"></div>
             } @else if (!note.title) {
-              <p class="note-placeholder">Doble click para editar</p>
+              <p class="note-placeholder">Escribe algo aquí...</p>
             }
           }
           @if (tagList.length > 0) {
@@ -395,8 +403,29 @@ export interface NoteCardData {
       .save-btn {
         background: #667eea;
         color: white;
-        font-weight: bold;
-        padding: 4px 12px;
+        font-weight: 600;
+        font-size: 12px;
+        padding: 5px 14px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .save-btn:hover {
+        background: #5a67d8;
+      }
+      .cancel-btn {
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 6px;
+        padding: 5px 12px;
+        cursor: pointer;
+        font-size: 12px;
+        color: #475569;
+        transition: background 0.15s;
+      }
+      .cancel-btn:hover {
+        background: rgba(255, 255, 255, 0.9);
       }
       .delete-btn {
         width: 24px;
@@ -405,7 +434,7 @@ export interface NoteCardData {
         border: none;
         background: rgba(0,0,0,0.08);
         color: #888;
-        font-size: 16px;
+        font-size: 13px;
         line-height: 1;
         cursor: pointer;
         display: flex;
@@ -414,8 +443,12 @@ export interface NoteCardData {
         transition: background 0.15s;
       }
       .delete-btn:hover {
-        background: #e74c3c;
+        background: #ef4444;
         color: white;
+      }
+      .action-btn.active {
+        background: rgba(0, 0, 0, 0.2);
+        color: #1e293b;
       }
       .note-card.pending {
         opacity: 0.65;
@@ -920,13 +953,43 @@ export class NoteCardComponent implements AfterViewInit, OnDestroy, OnChanges {
     this.sendToBackNote.emit(this.note.id);
   }
 
+  togglePin(): void {
+    const updated = {
+      ...this.note,
+      isPinned: !this.note.isPinned,
+    };
+    this.noteChange.emit(updated);
+  }
+
+  private mouseDownPos: { x: number; y: number } | null = null;
+
   onMouseDown(event: MouseEvent): void {
+    this.mouseDownPos = { x: event.clientX, y: event.clientY };
     if (this.isEditing || this.note.isPinned) return;
     this.dragStart.emit({
       noteId: this.note.id,
       mouseX: event.clientX,
       mouseY: event.clientY,
     });
+  }
+
+  onCardClick(event: MouseEvent): void {
+    if (this.isEditing) return;
+    const target = event.target as HTMLElement;
+    if (
+      target.closest('.note-actions') ||
+      target.closest('.resize-handle') ||
+      target.closest('.task-item input') ||
+      target.closest('.pin')
+    ) {
+      return;
+    }
+    // Si hubo arrastre mayor a 5px, no abrir edición
+    if (this.mouseDownPos) {
+      const dist = Math.hypot(event.clientX - this.mouseDownPos.x, event.clientY - this.mouseDownPos.y);
+      if (dist > 5) return;
+    }
+    this.startEdit();
   }
 
   onResizeStart(event: MouseEvent): void {

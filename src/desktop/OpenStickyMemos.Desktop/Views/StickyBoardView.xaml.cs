@@ -55,10 +55,16 @@ public partial class StickyBoardView : UserControl
     {
         if (_vm is null || ApprovalsButton is null) return;
         var pending = _vm.ActionRequests.Count(r => r.Status == "Pending");
-        ApprovalsButton.Content = $"⏳ {pending}";
-        ApprovalsButton.ToolTip = pending == 0
-            ? "Sin solicitudes pendientes"
-            : $"{pending} solicitud(es) pendiente(s) de aprobación";
+        if (_vm.IsOwner && pending > 0)
+        {
+            ApprovalsButton.Visibility = Visibility.Visible;
+            ApprovalsButton.Content = $"⏳ Solicitudes ({pending})";
+            ApprovalsButton.ToolTip = $"{pending} solicitud(es) pendiente(s) de aprobación";
+        }
+        else
+        {
+            ApprovalsButton.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void ClearNotesCanvas()
@@ -235,7 +241,14 @@ public partial class StickyBoardView : UserControl
     private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
     {
         _selectedNote = null;
-        // Click on canvas clears selection
+        if (e.ClickCount == 2)
+        {
+            var pos = e.GetPosition(NotesCanvas);
+            _ = _vm.CreateNoteAsync(
+                positionX: Math.Max(20, pos.X),
+                positionY: Math.Max(20, pos.Y),
+                color: "#FFE066");
+        }
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
@@ -309,7 +322,8 @@ public partial class StickyBoardView : UserControl
                 {
                     var noteTags = child.Tags?.ToLowerInvariant() ?? string.Empty;
                     var title = child.Title?.ToLowerInvariant() ?? string.Empty;
-                    var matches = noteTags.Contains(filter) || title.Contains(filter);
+                    var content = child.NoteContent?.ToLowerInvariant() ?? string.Empty;
+                    var matches = noteTags.Contains(filter) || title.Contains(filter) || content.Contains(filter);
                     child.Visibility = matches ? Visibility.Visible : Visibility.Collapsed;
                 }
             }
@@ -787,7 +801,7 @@ public partial class StickyBoardView : UserControl
     {
         if (_vm is null) return;
         _vm.ShowArchived = !_vm.ShowArchived;
-        ArchiveFilterButton.Content = _vm.ShowArchived ? "📂" : "🗄️";
+        ArchiveFilterButton.Content = _vm.ShowArchived ? "📂 Activas" : "🗄️ Archivadas";
         ArchiveFilterButton.ToolTip = _vm.ShowArchived ? "Mostrar notas activas" : "Ver notas archivadas";
         await _vm.LoadNotesAsync();
     }

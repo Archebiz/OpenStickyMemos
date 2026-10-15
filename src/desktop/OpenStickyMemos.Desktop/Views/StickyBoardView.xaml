@@ -135,6 +135,67 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- ⚪ Header secondary button style -->
+        <Style x:Key="HeaderSecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="Background" Value="#F1F5F9"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#E2E8F0"/>
+                                <Setter TargetName="bg" Property="BorderBrush" Value="#CBD5E1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 🟡 Header alert/approvals button style -->
+        <Style x:Key="HeaderAlertButtonStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#854D0E"/>
+            <Setter Property="Background" Value="#FEFCE8"/>
+            <Setter Property="BorderBrush" Value="#FDE047"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#FEF08A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -156,8 +217,9 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0" Content="← Volver"
+                <Button Grid.Column="0" Content="← Proyectos"
                         Style="{StaticResource BackButtonStyle}"
+                        ToolTip="Volver a mis proyectos"
                         Click="BackButton_Click"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal"
@@ -168,51 +230,54 @@
                                Foreground="{StaticResource TextPrimaryBrush}"
                                VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis"/>
+                    <Button x:Name="RenameProjectButton" Content="✏️"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            ToolTip="Renombrar proyecto"
+                            Click="RenameProjectButton_Click"
+                            Visibility="Collapsed"
+                            Margin="6,0,0,0"
+                            VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBox x:Name="TagFilterTextBox"
-                             Width="160"
-                             Height="30"
+                             Width="180"
+                             Height="32"
                              Margin="0,0,8,0"
-                             Padding="8,4"
+                             Padding="10,4"
                              VerticalContentAlignment="Center"
                              FontSize="12"
                              FontFamily="Segoe UI"
                              BorderBrush="{StaticResource BorderLightBrush}"
                              BorderThickness="1"
-                             Background="White"
-                             ToolTip="🔍 Filtrar por etiqueta o título"
+                             Background="#F8FAFC"
+                             ToolTip="🔍 Buscar en notas (título, contenido o etiqueta)"
                              TextChanged="TagFilterTextBox_TextChanged">
                         <TextBox.Resources>
                             <Style TargetType="{x:Type Border}">
-                                <Setter Property="CornerRadius" Value="6"/>
+                                <Setter Property="CornerRadius" Value="7"/>
                             </Style>
                         </TextBox.Resources>
                     </TextBox>
-                    <Button x:Name="RenameProjectButton" Content="✏️"
-                            Style="{StaticResource AddNoteButtonStyle}"
-                            ToolTip="Renombrar proyecto"
-                            Click="RenameProjectButton_Click"
-                            Visibility="Collapsed"
-                            Margin="0,0,8,0"/>
-                    <Button x:Name="ArchiveFilterButton" Content="🗄️"
-                            Style="{StaticResource AddNoteButtonStyle}"
-                            ToolTip="Ver notas archivadas"
-                            Click="ArchiveFilterButton_Click"
-                            Margin="0,0,8,0"/>
-                    <Button x:Name="ApprovalsButton" Content="⏳ 0"
-                            Style="{StaticResource AddNoteButtonStyle}"
+                    <Button x:Name="ApprovalsButton" Content="⏳ Solicitudes (0)"
+                            Style="{StaticResource HeaderAlertButtonStyle}"
                             ToolTip="Solicitudes pendientes de aprobación"
                             Click="ApprovalsButton_Click"
                             Visibility="Collapsed"
                             Margin="0,0,8,0"/>
-                    <Button Content="👥 Invitar"
-                            Style="{StaticResource AddNoteButtonStyle}"
+                    <Button x:Name="InviteButton" Content="👥 Compartir"
+                            Style="{StaticResource HeaderSecondaryButtonStyle}"
                             Click="InviteButton_Click"
+                            ToolTip="Gestionar miembros y enlaces de invitación"
                             Margin="0,0,8,0"/>
-                    <Button Content="＋ Nueva nota"
+                    <Button x:Name="ArchiveFilterButton" Content="🗄️ Archivadas"
+                            Style="{StaticResource HeaderSecondaryButtonStyle}"
+                            ToolTip="Ver notas archivadas"
+                            Click="ArchiveFilterButton_Click"
+                            Margin="0,0,8,0"/>
+                    <Button Content="＋ Nota"
                             Style="{StaticResource AddNoteButtonStyle}"
+                            ToolTip="Crear nueva nota [o doble clic en el lienzo]"
                             Click="AddNote_Click"/>
                 </StackPanel>
             </Grid>
@@ -223,6 +288,21 @@
                 ClipToBounds="True"
                 MouseLeftButtonDown="Canvas_MouseDown"
                 Background="{StaticResource BgGradientWarm}"/>
+
+        <!-- Bottom hint and live connection status bar -->
+        <Border Grid.Row="1" VerticalAlignment="Bottom"
+                Background="#D9FFFFFF" Padding="14,6"
+                BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="0,1,0,0"
+                IsHitTestVisible="False">
+            <Grid>
+                <TextBlock Text="💡 Tip: Haz doble clic en cualquier parte del lienzo para crear una nota rápida"
+                           FontSize="11" Foreground="#64748B" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Ellipse Width="7" Height="7" Fill="#10B981" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Sincronizado en tiempo real" FontSize="11" Foreground="#059669" FontWeight="Medium"/>
+                </StackPanel>
+            </Grid>
+        </Border>
 
         <!-- Invitation dialog overlay -->
         <Border Grid.RowSpan="2" x:Name="InvitationOverlay"

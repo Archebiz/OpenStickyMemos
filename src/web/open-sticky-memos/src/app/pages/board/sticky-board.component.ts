@@ -26,32 +26,61 @@ import { NoteResponse, ProjectResponse, InvitationResponse, NoteActionRequestRes
     <div class="board-container">
       <!-- Top bar -->
       <div class="board-header">
-        <button class="back-btn" (click)="goBack()">← Volver</button>
+        <button class="back-btn" (click)="goBack()" title="Volver al listado de proyectos">
+          ← Proyectos
+        </button>
+
         @if (project) {
-          <h2>{{ project.name }}</h2>
+          <div
+            class="project-title-container"
+            [class.editable]="project.ownerId === userId"
+            (click)="project.ownerId === userId ? openRenameDialog() : null"
+            [title]="project.ownerId === userId ? 'Clic para renombrar proyecto' : ''"
+          >
+            <h2>{{ project.name }}</h2>
+            @if (project.ownerId === userId) {
+              <span class="edit-title-icon" title="Renombrar proyecto">✏️</span>
+            }
+          </div>
         }
+
         <div class="header-actions">
-          @if (project && project.ownerId === userId) {
-            <button class="btn-share" (click)="openRenameDialog()" title="Renombrar proyecto">✏️</button>
-            <button class="btn-share" (click)="openApprovals()" title="Solicitudes pendientes">⏳ {{ pendingCount }}</button>
-            <button class="btn-share" (click)="openShareDialog()">
-              👥 Invitar
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input
+              class="tag-filter"
+              [(ngModel)]="tagFilter"
+              placeholder="Buscar en notas..."
+            />
+            @if (tagFilter) {
+              <button class="clear-search-btn" (click)="tagFilter = ''" title="Limpiar búsqueda">✕</button>
+            }
+          </div>
+
+          @if (project && project.ownerId === userId && pendingCount > 0) {
+            <button class="btn-approvals-alert" (click)="openApprovals()" title="Solicitudes pendientes de aprobación">
+              ⏳ Solicitudes <span class="badge-count">{{ pendingCount }}</span>
             </button>
           }
-          <input
-            class="tag-filter"
-            [(ngModel)]="tagFilter"
-            placeholder="🔍 Filtrar por etiqueta"
-          />
+
+          @if (project && project.ownerId === userId) {
+            <button class="btn-action btn-share" (click)="openShareDialog()" title="Gestionar colaboradores y enlaces">
+              👥 Compartir
+            </button>
+          }
+
           <button
-            class="btn-share"
+            class="btn-action"
+            [class.active-filter]="showArchived"
             (click)="toggleArchive()"
             [title]="showArchived ? 'Mostrar notas activas' : 'Ver notas archivadas'"
           >
-            {{ showArchived ? '📂' : '🗄️' }}
+            {{ showArchived ? '📂 Activas' : '🗄️ Archivadas' }}
           </button>
-          <button class="btn-add" [disabled]="addingNote" (click)="addNote()">
-            {{ addingNote ? '...' : '+ Nueva nota' }}
+
+          <button class="btn-primary-add" [disabled]="addingNote" (click)="addNote()" title="Crear nueva nota [Atajo: N]">
+            {{ addingNote ? '...' : '+ Nota' }}
+            <kbd class="kbd-hint">N</kbd>
           </button>
         </div>
       </div>
@@ -193,6 +222,7 @@ import { NoteResponse, ProjectResponse, InvitationResponse, NoteActionRequestRes
         class="canvas"
         (mouseup)="onMouseUp()"
         (mouseleave)="onMouseUp()"
+        (dblclick)="onCanvasDblClick($event)"
       >
         @for (note of visibleNotes; track note.id) {
           <app-note-card
@@ -210,11 +240,25 @@ import { NoteResponse, ProjectResponse, InvitationResponse, NoteActionRequestRes
 
         @if (notes.length === 0) {
           <div class="empty-canvas">
-            <p>No hay notas aún</p>
-            <button class="btn-add" [disabled]="addingNote" (click)="addNote()">{{ addingNote ? '...' : 'Crear primera nota' }}</button>
+            <span class="empty-canvas-icon">🗒️</span>
+            <h3>Tu tablero está listo</h3>
+            <p>Haz doble clic en cualquier parte o pulsa <strong>[N]</strong> para crear tu primera nota.</p>
+            <button class="btn-primary-add" [disabled]="addingNote" (click)="addNote()">
+              {{ addingNote ? '...' : '+ Crear primera nota' }}
+            </button>
           </div>
         }
       </div>
+
+      <!-- Live status bar -->
+      <div class="board-footer-bar">
+        <span class="footer-hint">💡 Tip: Haz doble clic en el lienzo para crear una nota rápida</span>
+        <div class="live-status" [class.connected]="signalRConnected">
+          <span class="status-dot"></span>
+          <span class="status-text">{{ signalRConnected ? 'Sincronizado en tiempo real' : 'Reconectando...' }}</span>
+        </div>
+      </div>
+
       <!-- Sidebar para mover notas a otro proyecto (visible al arrastrar) -->
       @if (moveSidebarVisible) {
         <div class="move-sidebar" (mouseleave)="hoveredProjectId = ''">
@@ -235,9 +279,9 @@ import { NoteResponse, ProjectResponse, InvitationResponse, NoteActionRequestRes
               class="input"
               [(ngModel)]="renameName"
               (keyup.enter)="saveRename()"
-              placeholder="Nuevo nombre"
+              placeholder="Nuevo nombre del proyecto"
             />
-            <button class="btn-primary" (click)="saveRename()">Guardar</button>
+            <button class="btn-primary" (click)="saveRename()">Guardar nombre</button>
             <button class="btn-secondary" (click)="showRename = false">Cancelar</button>
           </div>
         </div>
@@ -292,63 +336,179 @@ import { NoteResponse, ProjectResponse, InvitationResponse, NoteActionRequestRes
       .board-header {
         display: flex;
         align-items: center;
-        gap: 16px;
-        padding: 12px 20px;
+        gap: 14px;
+        padding: 10px 20px;
         background: white;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         z-index: 20;
       }
-      .board-header h2 {
+      .project-title-container {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: default;
+        user-select: none;
+      }
+      .project-title-container.editable {
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 6px;
+        transition: background 0.15s;
+      }
+      .project-title-container.editable:hover {
+        background: #f1f5f9;
+      }
+      .project-title-container h2 {
         margin: 0;
         font-size: 16px;
-        flex: 1;
+        font-weight: 600;
+        color: #1e293b;
+      }
+      .edit-title-icon {
+        font-size: 12px;
+        opacity: 0.5;
+        transition: opacity 0.15s;
+      }
+      .project-title-container.editable:hover .edit-title-icon {
+        opacity: 1;
       }
       .header-actions {
         display: flex;
+        align-items: center;
         gap: 8px;
+        margin-left: auto;
       }
-      .back-btn,
-      .btn-share,
-      .btn-add {
-        padding: 8px 16px;
+      .search-box {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+      .search-icon {
+        position: absolute;
+        left: 10px;
+        font-size: 12px;
+        pointer-events: none;
+        opacity: 0.5;
+      }
+      .tag-filter {
+        padding: 7px 28px 7px 28px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 12px;
+        outline: none;
+        width: 170px;
+        background: #f8fafc;
+        transition: all 0.2s;
+      }
+      .tag-filter:focus {
+        width: 220px;
+        background: white;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+      }
+      .clear-search-btn {
+        position: absolute;
+        right: 8px;
+        background: transparent;
+        border: none;
+        font-size: 11px;
+        color: #94a3b8;
+        cursor: pointer;
+        padding: 2px;
+      }
+      .clear-search-btn:hover {
+        color: #475569;
+      }
+      .back-btn {
+        padding: 7px 12px;
         border-radius: 8px;
         border: none;
         font-size: 13px;
         cursor: pointer;
         font-weight: 500;
-      }
-      .back-btn {
         background: transparent;
         color: #667eea;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: background 0.15s;
       }
-      .btn-share {
-        background: #f0f0f0;
-        color: #555;
+      .back-btn:hover {
+        background: #eef2ff;
       }
-      .btn-add {
-        background: #667eea;
-        color: white;
-      }
-      .btn-primary {
-        padding: 8px 20px;
+      .btn-action {
+        padding: 7px 13px;
         border-radius: 8px;
-        border: none;
-        font-size: 14px;
+        border: 1px solid #e2e8f0;
+        font-size: 12px;
         cursor: pointer;
-        background: #667eea;
-        color: white;
         font-weight: 500;
+        background: white;
+        color: #475569;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.15s;
       }
-      .btn-secondary {
-        padding: 8px 20px;
+      .btn-action:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+      }
+      .btn-action.active-filter {
+        background: #eff6ff;
+        border-color: #93c5fd;
+        color: #1d4ed8;
+      }
+      .btn-approvals-alert {
+        padding: 7px 12px;
+        border-radius: 8px;
+        border: 1px solid #fde047;
+        font-size: 12px;
+        cursor: pointer;
+        font-weight: 500;
+        background: #fefce8;
+        color: #a16207;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        animation: pulse 2s infinite;
+      }
+      .badge-count {
+        background: #ca8a04;
+        color: white;
+        border-radius: 10px;
+        padding: 1px 6px;
+        font-size: 10px;
+        font-weight: bold;
+      }
+      .btn-primary-add {
+        padding: 7px 14px;
         border-radius: 8px;
         border: none;
-        font-size: 14px;
+        font-size: 13px;
         cursor: pointer;
-        background: #f0f0f0;
-        color: #555;
-        margin-top: 8px;
-        width: 100%;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.35);
+        transition: transform 0.15s, box-shadow 0.15s;
+      }
+      .btn-primary-add:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(102, 126, 234, 0.45);
+      }
+      .btn-primary-add:active {
+        transform: translateY(0);
+      }
+      .kbd-hint {
+        background: rgba(255, 255, 255, 0.25);
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-family: monospace;
       }
       .canvas {
         flex: 1;
@@ -362,7 +522,54 @@ import { NoteResponse, ProjectResponse, InvitationResponse, NoteActionRequestRes
         left: 50%;
         transform: translate(-50%, -50%);
         text-align: center;
-        color: #999;
+        color: #64748b;
+        max-width: 320px;
+      }
+      .empty-canvas-icon {
+        font-size: 40px;
+        display: block;
+        margin-bottom: 8px;
+      }
+      .empty-canvas h3 {
+        margin: 0 0 6px;
+        font-size: 16px;
+        color: #1e293b;
+      }
+      .empty-canvas p {
+        margin: 0 0 16px;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      .board-footer-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 16px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        font-size: 11px;
+        color: #94a3b8;
+        z-index: 10;
+      }
+      .live-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #f59e0b;
+      }
+      .live-status.connected .status-dot {
+        background: #10b981;
+        box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+      }
+      .live-status.connected .status-text {
+        color: #059669;
+        font-weight: 500;
       }
       .empty-canvas p {
         margin-bottom: 12px;
@@ -581,17 +788,6 @@ import { NoteResponse, ProjectResponse, InvitationResponse, NoteActionRequestRes
         background: #667eea;
         color: white;
       }
-      .tag-filter {
-        padding: 8px 12px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 12px;
-        outline: none;
-        width: 170px;
-      }
-      .tag-filter:focus {
-        border-color: #667eea;
-      }
       .board-toast {
         position: fixed;
         right: 16px;
@@ -631,6 +827,7 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
   hoveredProjectId = '';
   tagFilter = '';
   toastMessage = '';
+  signalRConnected = false;
   private scheduledReminders = new Set<string>();
   private notifiedReminders = new Set<string>();
 
@@ -641,7 +838,9 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
       (n.tags ?? '')
         .toLowerCase()
         .split(',')
-        .some((t) => t.trim().includes(q))
+        .some((t) => t.trim().includes(q)) ||
+      (n.title ?? '').toLowerCase().includes(q) ||
+      (n.content ?? '').toLowerCase().includes(q)
     );
   }
 
@@ -689,6 +888,14 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     this.loadNotes();
     this.loadActionRequests();
     this.joinSignalR();
+
+    // Estado de conexión SignalR para feedback visual
+    this.signalR.connectionState$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((connected) => {
+        this.signalRConnected = connected;
+        this.cdr.markForCheck();
+      });
 
     // Proyectos del usuario (para mover notas y renombrar)
     this.api
@@ -742,9 +949,19 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     }
   }
 
-  @HostListener('document:keydown.delete')
-  handleKeydown(): void {
-    // Delete is handled via the note card (for now)
+  @HostListener('window:keydown', ['$event'])
+  handleGlobalShortcuts(event: KeyboardEvent): void {
+    if (event.key === 'n' || event.key === 'N') {
+      const activeTag = document.activeElement?.tagName?.toLowerCase();
+      const isEditable = (document.activeElement as HTMLElement)?.isContentEditable;
+      if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select' || isEditable) {
+        return;
+      }
+      if (!this.showShareDialog && !this.showRename && !this.showApprovals) {
+        event.preventDefault();
+        this.addNote();
+      }
+    }
   }
 
   private loadProject(): void {
@@ -849,14 +1066,28 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
   // ── CRUD ──
 
   addNote(): void {
+    const offset = (this.notes.length % 10) * 30;
+    this.addNoteAt(60 + offset, 60 + offset);
+  }
+
+  onCanvasDblClick(e: MouseEvent): void {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('canvas') || target.closest('.empty-canvas')) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const x = Math.max(20, e.clientX - rect.left);
+      const y = Math.max(20, e.clientY - rect.top);
+      this.addNoteAt(x, y);
+    }
+  }
+
+  addNoteAt(x: number, y: number): void {
     if (this.addingNote) return;
     this.addingNote = true;
-    const offset = this.notes.length * 30;
     this._maxWebZIndex++;
     this.api
       .createNote(this.projectId, {
-        positionX: 50 + offset,
-        positionY: 50 + offset,
+        positionX: Math.round(x),
+        positionY: Math.round(y),
         width: 280,
         height: 240,
         color: '#FFE066',
@@ -867,8 +1098,12 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
           this.notes = [...this.notes, this.toCardData(note)];
           this.addingNote = false;
           this.scheduleReminders();
+          this.cdr.markForCheck();
         },
-        error: () => (this.addingNote = false),
+        error: () => {
+          this.addingNote = false;
+          this.cdr.markForCheck();
+        },
       });
   }
 

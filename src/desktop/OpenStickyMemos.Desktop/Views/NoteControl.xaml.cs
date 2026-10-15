@@ -346,6 +346,20 @@ public partial class NoteControl : UserControl
         _editTasks = null;
     }
 
+    private void Editor_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            EndEdit(false);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Enter && (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) || Keyboard.Modifiers.HasFlag(ModifierKeys.Windows)))
+        {
+            EndEdit(true);
+            e.Handled = true;
+        }
+    }
+
     private void SyncViewMode()
     {
         var hasTitle = !string.IsNullOrEmpty(Title);
