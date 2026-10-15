@@ -135,6 +135,7 @@ public interface IApiService
     Task<List<NoteResponse>> GetNotesAsync(string projectId, bool includeArchived = false);
     Task<NoteResponse?> CreateNoteAsync(string projectId, object request);
     Task<NoteResponse?> UpdateNoteAsync(string projectId, string noteId, object request);
+    Task<NoteResponse?> UpdateNotePositionAsync(string projectId, string noteId, double x, double y);
     Task<NoteActionResponse?> DeleteNoteAsync(string projectId, string noteId);
     Task<NoteActionResponse?> ArchiveNoteAsync(string projectId, string noteId);
     Task<NoteActionResponse?> UnarchiveNoteAsync(string projectId, string noteId);
@@ -217,13 +218,30 @@ public class ApiService : IApiService
         PropertyNameCaseInsensitive = true
     };
 
+    private async Task<HttpResponseMessage> SendWithRetryAsync(Func<Task<HttpResponseMessage>> sendRequest)
+    {
+        var response = await sendRequest();
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            Log("401 Unauthorized recibido. Intentando RefreshTokenAsync()...");
+            var refreshed = await _auth.RefreshTokenAsync();
+            if (refreshed)
+            {
+                ApplyToken();
+                Log("Token refrescado con éxito. Reintentando petición...");
+                response = await sendRequest();
+            }
+        }
+        return response;
+    }
+
     private async Task<T?> GetAsync<T>(string url) where T : class
     {
         var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}{url}";
         Log($"GET {fullUrl}");
         try
         {
-            var response = await _http.GetAsync(url);
+            var response = await SendWithRetryAsync(() => _http.GetAsync(url));
             var body = await response.Content.ReadAsStringAsync();
             Log($"GET {fullUrl} → {(int)response.StatusCode} {body[..Math.Min(body.Length, 500)]}");
             if (!response.IsSuccessStatusCode) return null;
@@ -243,7 +261,7 @@ public class ApiService : IApiService
         Log($"POST {fullUrl} {json}");
         try
         {
-            var response = await _http.PostAsJsonAsync(url, body);
+            var response = await SendWithRetryAsync(() => _http.PostAsJsonAsync(url, body));
             var respBody = await response.Content.ReadAsStringAsync();
             Log($"POST {fullUrl} → {(int)response.StatusCode} {respBody[..Math.Min(respBody.Length, 500)]}");
             if (!response.IsSuccessStatusCode) return null;
@@ -256,13 +274,33 @@ public class ApiService : IApiService
         }
     }
 
+    private async Task<T?> PatchAsync<T>(string url, object body) where T : class
+    {
+        var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}{url}";
+        var json = JsonSerializer.Serialize(body);
+        Log($"PATCH {fullUrl} {json}");
+        try
+        {
+            var response = await SendWithRetryAsync(() => _http.PatchAsJsonAsync(url, body));
+            var respBody = await response.Content.ReadAsStringAsync();
+            Log($"PATCH {fullUrl} → {(int)response.StatusCode} {respBody[..Math.Min(respBody.Length, 500)]}");
+            if (!response.IsSuccessStatusCode) return null;
+            return JsonSerializer.Deserialize<T>(respBody, JsonOptions);
+        }
+        catch (Exception ex)
+        {
+            LogError($"PATCH {fullUrl}", ex);
+            return null;
+        }
+    }
+
     private async Task<bool> DeleteAsync(string url)
     {
         var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}{url}";
         Log($"DELETE {fullUrl}");
         try
         {
-            var response = await _http.DeleteAsync(url);
+            var response = await SendWithRetryAsync(() => _http.DeleteAsync(url));
             Log($"DELETE {fullUrl} → {(int)response.StatusCode}");
             return response.IsSuccessStatusCode;
         }
@@ -351,13 +389,13 @@ public class ApiService : IApiService
 
     public async Task<NoteResponse?> UpdateNoteAsync(string projectId, string noteId, object request)
     {
-        var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}/api/Projects/{projectId}/notes/{noteId}";
+        var url = $"/api/Projects/{projectId}/notes/{noteId}";
+        var fullUrl = $"{_http.BaseAddress?.OriginalString.TrimEnd('/')}{url}";
         var json = JsonSerializer.Serialize(request);
         Log($"PUT {fullUrl} {json}");
         try
         {
-            var response = await _http.PutAsJsonAsync(
-                $"/api/Projects/{projectId}/notes/{noteId}", request);
+            var response = await SendWithRetryAsync(() => _http.PutAsJsonAsync(url, request));
             var respBody = await response.Content.ReadAsStringAsync();
             Log($"PUT {fullUrl} → {(int)response.StatusCode} {respBody[..Math.Min(respBody.Length, 500)]}");
             if (!response.IsSuccessStatusCode) return null;
@@ -368,6 +406,13 @@ public class ApiService : IApiService
             LogError($"PUT {fullUrl}", ex);
             return null;
         }
+    }
+
+    public async Task<NoteResponse?> UpdateNotePositionAsync(string projectId, string noteId, double x, double y)
+    {
+        return await PatchAsync<NoteResponse>(
+            $"/api/Projects/{projectId}/notes/{noteId}/position",
+            new { positionX = x, positionY = y });
     }
 
     public async Task<NoteActionResponse?> DeleteNoteAsync(string projectId, string noteId)

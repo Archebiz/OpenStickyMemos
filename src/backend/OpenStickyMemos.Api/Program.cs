@@ -35,8 +35,12 @@ if (connectionString is not null)
         connectionString = $"Host={uri.Host};Port={uri.Port};Database={db};Username={userInfo[0]};Password={userInfo[1]}";
     }
 
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseNpgsql(connectionString));
+    builder.Services.AddDbContextPool<AppDbContext>(options =>
+        options.UseNpgsql(connectionString, npgsqlOptions =>
+        {
+            npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 3);
+            npgsqlOptions.CommandTimeout(15);
+        }));
 }
 
 // ── Services ──
@@ -110,6 +114,12 @@ builder.Services.AddAuthorization();
 // ── SignalR ──
 builder.Services.AddSignalR();
 
+// ── Compression ──
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
+
 // ── Controllers + OpenAPI ──
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -149,16 +159,25 @@ logger.LogInformation("Swagger UI at: /swagger");
 
 // ── Pipeline ──
 app.UseForwardedHeaders();
+app.UseResponseCompression();
 app.UseSerilogRequestLogging();
 
 // OpenAPI disponible en todos los entornos
 app.MapOpenApi();
 
-// Middleware que agrega esquema Bearer al spec OpenAPI y corrige URLs a HTTPS
+// Middleware que agrega esquema Bearer al spec OpenAPI y corrige URLs a HTTPS (cacheado en memoria)
+string? cachedOpenApiJson = null;
 app.Use(async (ctx, next) =>
 {
     if (ctx.Request.Path == "/openapi/v1.json")
     {
+        if (cachedOpenApiJson is not null)
+        {
+            ctx.Response.ContentType = "application/json;charset=utf-8";
+            await ctx.Response.WriteAsync(cachedOpenApiJson);
+            return;
+        }
+
         var body = ctx.Response.Body;
         using var buffer = new MemoryStream();
         ctx.Response.Body = buffer;
@@ -196,9 +215,10 @@ app.Use(async (ctx, next) =>
             new System.Text.Json.Nodes.JsonObject { ["Bearer"] = new System.Text.Json.Nodes.JsonArray() }
         };
 
+        cachedOpenApiJson = doc.ToJsonString();
         ctx.Response.Body = body;
         ctx.Response.ContentType = "application/json;charset=utf-8";
-        await ctx.Response.WriteAsync(doc.ToJsonString());
+        await ctx.Response.WriteAsync(cachedOpenApiJson);
         return;
     }
     await next();

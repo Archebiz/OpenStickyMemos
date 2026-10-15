@@ -24,6 +24,8 @@ public class AppDbContext : DbContext
         {
             entity.HasIndex(u => u.Email).IsUnique();
             entity.HasIndex(u => new { u.AuthProvider, u.ProviderId }).IsUnique();
+            entity.HasIndex(u => u.PasswordResetToken)
+                  .HasFilter("\"PasswordResetToken\" IS NOT NULL");
         });
 
         // ── Project ──
@@ -86,6 +88,8 @@ public class AppDbContext : DbContext
         // ── Note ──
         modelBuilder.Entity<Note>(entity =>
         {
+            entity.HasIndex(n => new { n.ProjectId, n.IsArchived, n.IsPinned, n.UpdatedAt });
+
             entity.HasOne(n => n.Project)
                   .WithMany(p => p.Notes)
                   .HasForeignKey(n => n.ProjectId)

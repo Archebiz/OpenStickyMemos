@@ -32,17 +32,33 @@ public class ProjectService : IProjectService
 
     public async Task<List<ProjectResponse>> GetUserProjectsAsync(Guid userId)
     {
-        var projectIds = await _db.ProjectMembers
-            .Where(pm => pm.UserId == userId)
-            .Select(pm => pm.ProjectId)
-            .ToListAsync();
-
         return await _db.Projects
-            .Where(p => projectIds.Contains(p.Id))
-            .Include(p => p.Owner)
-            .Include(p => p.Members).ThenInclude(m => m.User)
-            .Include(p => p.Notes)
-            .Select(p => MapToResponse(p))
+            .AsNoTracking()
+            .Where(p => p.Members.Any(pm => pm.UserId == userId))
+            .OrderByDescending(p => p.UpdatedAt)
+            .Select(p => new ProjectResponse
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Description = p.Description,
+                OwnerId = p.OwnerId,
+                OwnerName = p.Owner.DisplayName,
+                OwnerAvatar = p.Owner.AvatarUrl,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt,
+                MemberCount = p.Members.Count(),
+                NoteCount = p.Notes.Count(),
+                Members = p.Members.Select(m => new MemberInfo
+                {
+                    Id = m.Id,
+                    UserId = m.User.Id,
+                    Email = m.User.Email,
+                    DisplayName = m.User.DisplayName,
+                    AvatarUrl = m.User.AvatarUrl,
+                    Role = m.Role.ToString(),
+                    JoinedAt = m.JoinedAt
+                }).ToList()
+            })
             .ToListAsync();
     }
 
@@ -51,13 +67,33 @@ public class ProjectService : IProjectService
         if (!await IsMemberAsync(projectId, userId))
             return null;
 
-        var project = await _db.Projects
-            .Include(p => p.Owner)
-            .Include(p => p.Members).ThenInclude(m => m.User)
-            .Include(p => p.Notes)
-            .FirstOrDefaultAsync(p => p.Id == projectId);
-
-        return project is null ? null : MapToResponse(project);
+        return await _db.Projects
+            .AsNoTracking()
+            .Where(p => p.Id == projectId)
+            .Select(p => new ProjectResponse
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Description = p.Description,
+                OwnerId = p.OwnerId,
+                OwnerName = p.Owner.DisplayName,
+                OwnerAvatar = p.Owner.AvatarUrl,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt,
+                MemberCount = p.Members.Count(),
+                NoteCount = p.Notes.Count(),
+                Members = p.Members.Select(m => new MemberInfo
+                {
+                    Id = m.Id,
+                    UserId = m.User.Id,
+                    Email = m.User.Email,
+                    DisplayName = m.User.DisplayName,
+                    AvatarUrl = m.User.AvatarUrl,
+                    Role = m.Role.ToString(),
+                    JoinedAt = m.JoinedAt
+                }).ToList()
+            })
+            .FirstOrDefaultAsync();
     }
 
     public async Task<ProjectResponse> CreateAsync(CreateProjectRequest request, Guid ownerId)

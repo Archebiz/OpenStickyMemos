@@ -99,7 +99,7 @@ export class SignalRService implements OnDestroy {
 
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl(this.config.signalrUrl, {
-        accessTokenFactory: () => token,
+        accessTokenFactory: () => this.authService.getAccessToken() ?? '',
         withCredentials: true,
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])

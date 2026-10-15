@@ -39,15 +39,19 @@ public class NoteService : INoteService
 
     public async Task<List<NoteResponse>> GetProjectNotesAsync(Guid projectId, Guid userId, bool includeArchived = false)
     {
-        var project = await _db.Projects.AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == projectId);
+        var projectInfo = await _db.Projects.AsNoTracking()
+            .Where(p => p.Id == projectId)
+            .Select(p => new
+            {
+                IsOwner = p.OwnerId == userId,
+                IsMember = p.Members.Any(m => m.UserId == userId)
+            })
+            .FirstOrDefaultAsync();
 
-        if (project is null || !await _projectService.IsMemberAsync(projectId, userId))
+        if (projectInfo is null || !projectInfo.IsMember)
             return new List<NoteResponse>();
 
-        var isOwner = project.OwnerId == userId;
-
-        var query = _db.Notes.Where(n => n.ProjectId == projectId);
+        var query = _db.Notes.AsNoTracking().Where(n => n.ProjectId == projectId);
         if (!includeArchived)
             query = query.Where(n => !n.IsArchived);
 
@@ -56,26 +60,32 @@ public class NoteService : INoteService
             .OrderByDescending(n => n.IsPinned)
             .ThenByDescending(n => n.IsArchived)
             .ThenByDescending(n => n.UpdatedAt)
-            .Select(n => MapToResponse(n, isOwner))
+            .Select(n => MapToResponse(n, projectInfo.IsOwner))
             .ToListAsync();
     }
 
     public async Task<NoteResponse?> GetByIdAsync(Guid noteId, Guid userId)
     {
-        var note = await _db.Notes
+        var note = await _db.Notes.AsNoTracking()
             .Include(n => n.Author)
             .FirstOrDefaultAsync(n => n.Id == noteId);
 
         if (note is null)
             return null;
 
-        if (!await _projectService.IsMemberAsync(note.ProjectId, userId))
+        var projectInfo = await _db.Projects.AsNoTracking()
+            .Where(p => p.Id == note.ProjectId)
+            .Select(p => new
+            {
+                IsOwner = p.OwnerId == userId,
+                IsMember = p.Members.Any(m => m.UserId == userId)
+            })
+            .FirstOrDefaultAsync();
+
+        if (projectInfo is null || !projectInfo.IsMember)
             return null;
 
-        var project = await _db.Projects.AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == note.ProjectId);
-
-        return MapToResponse(note, project?.OwnerId == userId);
+        return MapToResponse(note, projectInfo.IsOwner);
     }
 
     public async Task<NoteResponse?> CreateAsync(Guid projectId, CreateNoteRequest request, Guid authorId)
@@ -531,11 +541,38 @@ public class NoteService : INoteService
 
     public async Task<NoteResponse?> UpdatePositionAsync(Guid noteId, UpdateNotePositionRequest request, Guid userId)
     {
-        return await UpdateAsync(noteId, new UpdateNoteRequest
-        {
-            PositionX = request.PositionX,
-            PositionY = request.PositionY
-        }, userId);
+        var note = await _db.Notes
+            .Include(n => n.Author)
+            .FirstOrDefaultAsync(n => n.Id == noteId);
+
+        if (note is null)
+            return null;
+
+        var projectInfo = await _db.Projects.AsNoTracking()
+            .Where(p => p.Id == note.ProjectId)
+            .Select(p => new
+            {
+                IsOwner = p.OwnerId == userId,
+                IsMember = p.Members.Any(m => m.UserId == userId)
+            })
+            .FirstOrDefaultAsync();
+
+        if (projectInfo is null || !projectInfo.IsMember)
+            return null;
+
+        note.PositionX = request.PositionX;
+        note.PositionY = request.PositionY;
+        note.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+
+        var response = MapToResponse(note, projectInfo.IsOwner);
+
+        // SignalR: notificar actualización a todos los miembros del proyecto
+        await _hubContext.Clients.Group(note.ProjectId.ToString())
+            .SendAsync("NoteUpdated", response);
+
+        return response;
     }
 
     // ── Helpers ──

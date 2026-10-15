@@ -170,7 +170,26 @@
                                TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBox x:Name="TagFilterTextBox"
+                             Width="160"
+                             Height="30"
+                             Margin="0,0,8,0"
+                             Padding="8,4"
+                             VerticalContentAlignment="Center"
+                             FontSize="12"
+                             FontFamily="Segoe UI"
+                             BorderBrush="{StaticResource BorderLightBrush}"
+                             BorderThickness="1"
+                             Background="White"
+                             ToolTip="🔍 Filtrar por etiqueta o título"
+                             TextChanged="TagFilterTextBox_TextChanged">
+                        <TextBox.Resources>
+                            <Style TargetType="{x:Type Border}">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
                     <Button x:Name="RenameProjectButton" Content="✏️"
                             Style="{StaticResource AddNoteButtonStyle}"
                             ToolTip="Renombrar proyecto"

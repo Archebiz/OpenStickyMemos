@@ -4,11 +4,13 @@ import {
   OnDestroy,
   HostListener,
   ViewChild,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, debounceTime } from 'rxjs';
+import { Subject, debounceTime, groupBy, mergeMap, switchMap, takeUntil } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { SignalRService } from '../../core/signalr.service';
 import { NoteCardComponent, NoteCardData } from './note-card.component';
@@ -19,6 +21,7 @@ import { NoteResponse, ProjectResponse, InvitationResponse, NoteActionRequestRes
   selector: 'app-sticky-board',
   standalone: true,
   imports: [CommonModule, FormsModule, NoteCardComponent, ConfirmDialogComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="board-container">
       <!-- Top bar -->
@@ -188,7 +191,6 @@ import { NoteResponse, ProjectResponse, InvitationResponse, NoteActionRequestRes
       <!-- Canvas -->
       <div
         class="canvas"
-        (mousemove)="onMouseMove($event)"
         (mouseup)="onMouseUp()"
         (mouseleave)="onMouseUp()"
       >
@@ -675,7 +677,8 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private api: ApiService,
-    private signalR: SignalRService
+    private signalR: SignalRService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -688,17 +691,40 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     this.joinSignalR();
 
     // Proyectos del usuario (para mover notas y renombrar)
-    this.api.getProjects().subscribe((ps) => (this.allProjects = ps));
+    this.api
+      .getProjects()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((ps) => {
+        this.allProjects = ps;
+        this.cdr.markForCheck();
+      });
 
     // Pedir permiso para notificaciones (recordatorios)
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
 
-    // Auto-save with 500ms debounce
-    this.saveSubject.pipe(debounceTime(500)).subscribe(({ noteId, changes }) => {
-      this.api.updateNote(this.projectId, noteId, changes).subscribe();
-    });
+    // Auto-save debounced por noteId para evitar pérdida de cambios
+    this.saveSubject
+      .pipe(
+        groupBy((item) => item.noteId),
+        mergeMap((group$) =>
+          group$.pipe(
+            debounceTime(300),
+            switchMap(({ noteId, changes }) => {
+              if (changes.positionX !== undefined && changes.positionY !== undefined) {
+                return this.api.updateNotePosition(this.projectId, noteId, {
+                  positionX: changes.positionX,
+                  positionY: changes.positionY,
+                });
+              }
+              return this.api.updateNote(this.projectId, noteId, changes);
+            })
+          )
+        ),
+        takeUntil(this.destroy$)
+      )
+      .subscribe();
 
     // Registrar touchmove con passive: false para poder prevenir scroll/zoom
     this.touchMoveHandler = (e: TouchEvent) => this.onTouchMove(e);
@@ -722,24 +748,40 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
   }
 
   private loadProject(): void {
-    this.api.getProject(this.projectId).subscribe({
-      next: (p) => (this.project = p),
-    });
+    this.api
+      .getProject(this.projectId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (p) => {
+          this.project = p;
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   private loadNotes(): void {
-    this.api.getNotes(this.projectId, this.showArchived).subscribe({
-      next: (data) => {
-        this.notes = data.map((n) => this.toCardData(n));
-        this.scheduleReminders();
-      },
-    });
+    this.api
+      .getNotes(this.projectId, this.showArchived)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.notes = data.map((n) => this.toCardData(n));
+          this.scheduleReminders();
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   private loadActionRequests(): void {
-    this.api.getActionRequests(this.projectId).subscribe({
-      next: (reqs) => (this.actionRequests = reqs),
-    });
+    this.api
+      .getActionRequests(this.projectId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (reqs) => {
+          this.actionRequests = reqs;
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   private joinSignalR(): void {
@@ -747,45 +789,61 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
       this.signalR.joinProject(this.projectId);
     });
 
-    this.signalR.noteCreated$.subscribe((note) => {
-      if (note.projectId === this.projectId) {
-        const exists = this.notes.some((n) => n.id === note.id);
-        if (!exists) {
-          this.notes = [...this.notes, this.toCardData(note)];
+    this.signalR.noteCreated$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((note) => {
+        if (note.projectId === this.projectId) {
+          const exists = this.notes.some((n) => n.id === note.id);
+          if (!exists) {
+            this.notes = [...this.notes, this.toCardData(note)];
+            this.cdr.markForCheck();
+          }
         }
-      }
-    });
+      });
 
-    this.signalR.noteUpdated$.subscribe((note) => {
-      if (note.projectId === this.projectId) {
-        if (note.isArchived && !this.showArchived) {
-          this.notes = this.notes.filter((n) => n.id !== note.id);
-          return;
+    this.signalR.noteUpdated$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((note) => {
+        if (note.projectId === this.projectId) {
+          if (note.isArchived && !this.showArchived) {
+            this.notes = this.notes.filter((n) => n.id !== note.id);
+            this.cdr.markForCheck();
+            return;
+          }
+          this.notes = this.notes.map((n) =>
+            n.id === note.id ? this.toCardData(note) : n
+          );
+          this.scheduleReminders();
+          this.cdr.markForCheck();
         }
-        this.notes = this.notes.map((n) =>
-          n.id === note.id ? this.toCardData(note) : n
-        );
-        this.scheduleReminders();
-      }
-    });
+      });
 
-    this.signalR.noteDeleted$.subscribe((data) => {
-      if (data.projectId === this.projectId) {
-        this.notes = this.notes.filter((n) => n.id !== data.noteId);
-      }
-    });
+    this.signalR.noteDeleted$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((data) => {
+        if (data.projectId === this.projectId) {
+          this.notes = this.notes.filter((n) => n.id !== data.noteId);
+          this.cdr.markForCheck();
+        }
+      });
 
-    this.signalR.actionRequestCreated$.subscribe(() => {
-      this.loadActionRequests();
-    });
+    this.signalR.actionRequestCreated$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.loadActionRequests();
+      });
 
-    this.signalR.actionRequestResolved$.subscribe(() => {
-      this.loadActionRequests();
-    });
+    this.signalR.actionRequestResolved$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.loadActionRequests();
+      });
 
-    this.signalR.memberAdded$.subscribe(() => {
-      this.loadProject(); // Refresh member list
-    });
+    this.signalR.memberAdded$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.loadProject();
+      });
   }
 
   // ── CRUD ──
@@ -1053,20 +1111,22 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     if (this.dragging) {
       const dx = event.clientX - this.dragging.startX;
       const dy = event.clientY - this.dragging.startY;
-      this.notes = this.notes.map((n) =>
-        n.id === this.dragging!.noteId
-          ? { ...n, positionX: this.dragging!.origX + dx, positionY: this.dragging!.origY + dy }
-          : n
-      );
+      const note = this.notes.find((n) => n.id === this.dragging!.noteId);
+      if (note) {
+        note.positionX = this.dragging.origX + dx;
+        note.positionY = this.dragging.origY + dy;
+        this.cdr.markForCheck();
+      }
     }
     if (this.resizing) {
       const dx = event.clientX - this.resizing.startX;
       const dy = event.clientY - this.resizing.startY;
-      this.notes = this.notes.map((n) =>
-        n.id === this.resizing!.noteId
-          ? { ...n, width: Math.max(120, this.resizing!.origW + dx), height: Math.max(80, this.resizing!.origH + dy) }
-          : n
-      );
+      const note = this.notes.find((n) => n.id === this.resizing!.noteId);
+      if (note) {
+        note.width = Math.max(120, this.resizing.origW + dx);
+        note.height = Math.max(80, this.resizing.origH + dy);
+        this.cdr.markForCheck();
+      }
     }
   }
 
@@ -1076,20 +1136,22 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     if (this.dragging) {
       const dx = event.touches[0].clientX - this.dragging.startX;
       const dy = event.touches[0].clientY - this.dragging.startY;
-      this.notes = this.notes.map((n) =>
-        n.id === this.dragging!.noteId
-          ? { ...n, positionX: this.dragging!.origX + dx, positionY: this.dragging!.origY + dy }
-          : n
-      );
+      const note = this.notes.find((n) => n.id === this.dragging!.noteId);
+      if (note) {
+        note.positionX = this.dragging.origX + dx;
+        note.positionY = this.dragging.origY + dy;
+        this.cdr.markForCheck();
+      }
     }
     if (this.resizing) {
       const dx = event.touches[0].clientX - this.resizing.startX;
       const dy = event.touches[0].clientY - this.resizing.startY;
-      this.notes = this.notes.map((n) =>
-        n.id === this.resizing!.noteId
-          ? { ...n, width: Math.max(120, this.resizing!.origW + dx), height: Math.max(80, this.resizing!.origH + dy) }
-          : n
-      );
+      const note = this.notes.find((n) => n.id === this.resizing!.noteId);
+      if (note) {
+        note.width = Math.max(120, this.resizing.origW + dx);
+        note.height = Math.max(80, this.resizing.origH + dy);
+        this.cdr.markForCheck();
+      }
     }
   }
 

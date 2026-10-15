@@ -93,7 +93,7 @@ namespace OpenStickyMemos.Api.Migrations
 
                     b.HasIndex("AuthorId");
 
-                    b.HasIndex("ProjectId");
+                    b.HasIndex("ProjectId", "IsArchived", "IsPinned", "UpdatedAt");
 
                     b.ToTable("Notes");
                 });
@@ -337,6 +337,9 @@ namespace OpenStickyMemos.Api.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique();
+
+                    b.HasIndex("PasswordResetToken")
+                        .HasFilter("\"PasswordResetToken\" IS NOT NULL");
 
                     b.HasIndex("AuthProvider", "ProviderId")
                         .IsUnique();

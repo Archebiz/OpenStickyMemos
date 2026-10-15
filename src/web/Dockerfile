@@ -6,13 +6,9 @@ RUN npm ci
 COPY open-sticky-memos/ .
 RUN npm run build --prod
 
-# Stage 2: Serve with Nginx (stable atualizado)
+# Stage 2: Serve with Nginx
 FROM nginx:1.30.3-alpine3.23-slim
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/open-sticky-memos/browser /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
-
-RUN chmod +x /docker-entrypoint.sh
-
-EXPOSE 80
-ENTRYPOINT ["/docker-entrypoint.sh"]

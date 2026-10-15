@@ -58,14 +58,27 @@ public class StickyBoardViewModel : BaseViewModel
         set { if (_showArchived != value) { _showArchived = value; OnPropertyChanged(); } }
     }
 
+    private string _tagFilter = string.Empty;
+    public string TagFilter
+    {
+        get => _tagFilter;
+        set
+        {
+            if (_tagFilter != value)
+            {
+                _tagFilter = value;
+                OnPropertyChanged();
+                FilterChanged?.Invoke();
+            }
+        }
+    }
+
     public ObservableCollection<ProjectResponse> Projects { get; } = new();
     public ObservableCollection<NoteActionRequestResponse> ActionRequests { get; } = new();
 
     private readonly System.Timers.Timer _debounceTimer;
     private readonly System.Timers.Timer _reminderTimer;
-    private string? _pendingNoteId;
-    private string? _pendingTitle;
-    private string? _pendingContent;
+    private readonly Dictionary<string, (string Title, string Content)> _pendingContentUpdates = new();
 
     /// <summary>Eventos para la vista</summary>
     public event Action<NoteItem>? NoteAdded;
@@ -74,6 +87,7 @@ public class StickyBoardViewModel : BaseViewModel
     public event Action? BoardCleared;
     public event Action? ActionRequestsChanged;
     public event Action<NoteItem>? ReminderDue;
+    public event Action? FilterChanged;
 
     public StickyBoardViewModel(
         IApiService api,
@@ -344,8 +358,8 @@ public class StickyBoardViewModel : BaseViewModel
         note.PositionX = Math.Max(0, x);
         note.PositionY = Math.Max(0, y);
 
-        // Auto-save with debounce
-        _ = _api.UpdateNoteAsync(_projectId, noteId, new { positionX = note.PositionX, positionY = note.PositionY });
+        // Optimizado: llamada PATCH al endpoint granular de posición
+        _ = _api.UpdateNotePositionAsync(_projectId, noteId, note.PositionX, note.PositionY);
     }
 
     public void UpdateNoteZIndex(string noteId, int zIndex)
@@ -386,10 +400,11 @@ public class StickyBoardViewModel : BaseViewModel
         note.Title = title;
         note.Content = content;
 
-        // Debounce auto-save
-        _pendingNoteId = noteId;
-        _pendingTitle = title;
-        _pendingContent = content;
+        // Debounce auto-save por nota para evitar que se pisen entre sí
+        lock (_pendingContentUpdates)
+        {
+            _pendingContentUpdates[noteId] = (title, content);
+        }
         _debounceTimer.Stop();
         _debounceTimer.Start();
     }
@@ -420,18 +435,30 @@ public class StickyBoardViewModel : BaseViewModel
 
     private void FlushPendingContent()
     {
-        if (_pendingNoteId is null) return;
-        _ = _api.UpdateNoteAsync(_projectId, _pendingNoteId, new
+        Dictionary<string, (string Title, string Content)> toFlush;
+        lock (_pendingContentUpdates)
         {
-            title = _pendingTitle,
-            content = _pendingContent,
-        });
-        _pendingNoteId = null;
+            if (_pendingContentUpdates.Count == 0) return;
+            toFlush = new Dictionary<string, (string Title, string Content)>(_pendingContentUpdates);
+            _pendingContentUpdates.Clear();
+        }
+
+        foreach (var (noteId, data) in toFlush)
+        {
+            _ = _api.UpdateNoteAsync(_projectId, noteId, new
+            {
+                title = data.Title,
+                content = data.Content,
+            });
+        }
     }
 
     public void GoBack()
     {
         _signalR.LeaveProjectAsync(_projectId);
+        _signalR.NoteCreated -= OnRemoteNoteCreated;
+        _signalR.NoteUpdated -= OnRemoteNoteUpdated;
+        _signalR.NoteDeleted -= OnRemoteNoteDeleted;
         _signalR.ActionRequestCreated -= OnActionRequestChanged;
         _signalR.ActionRequestResolved -= OnActionRequestChanged;
         _reminderTimer.Stop();

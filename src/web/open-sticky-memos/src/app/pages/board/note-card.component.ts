@@ -8,6 +8,9 @@ import {
   AfterViewInit,
   OnDestroy,
   HostListener,
+  ChangeDetectionStrategy,
+  OnChanges,
+  SimpleChanges,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -37,6 +40,7 @@ export interface NoteCardData {
   selector: 'app-note-card',
   standalone: true,
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
       class="note-card"
@@ -641,7 +645,7 @@ export interface NoteCardData {
     `,
   ],
 })
-export class NoteCardComponent implements AfterViewInit, OnDestroy {
+export class NoteCardComponent implements AfterViewInit, OnDestroy, OnChanges {
   @Input() note!: NoteCardData;
   @Output() noteChange = new EventEmitter<NoteCardData>();
   private touchMoveHandler: ((e: TouchEvent) => void) | null = null;
@@ -685,29 +689,30 @@ export class NoteCardComponent implements AfterViewInit, OnDestroy {
   showTagsEditor = false;
   showReminderEditor = false;
 
-  /** Tareas parseadas desde el contenido (para la vista del modo tareas). */
-  get tasks(): { text: string; checked: boolean }[] {
-    return this.parseTasks(this.note.content);
-  }
+  /** Tareas cacheadas desde el contenido (para evitar parsing en cada ciclo de change detection). */
+  tasks: { text: string; checked: boolean }[] = [];
 
-  /** Etiquetas como lista (para los chips). */
-  get tagList(): string[] {
-    if (!this.note.tags) return [];
-    return this.note.tags
-      .split(',')
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
+  /** Etiquetas cacheadas como lista (para los chips). */
+  tagList: string[] = [];
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['note']) {
+      this.tasks = this.parseTasks(this.note?.content);
+      this.tagList = this.note?.tags
+        ? this.note.tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
+        : [];
+    }
   }
 
   ngAfterViewInit(): void {}
 
-  ngOnInit(): void {
-    // Registrar con passive: false para que preventDefault() bloquee scroll/zoom
-    this.touchMoveHandler = (e: TouchEvent) => this.onDocumentTouchMove(e);
-    document.addEventListener('touchmove', this.touchMoveHandler, { passive: false });
-  }
+  ngOnInit(): void {}
 
   ngOnDestroy(): void {
+    this.removeTouchMoveListener();
+  }
+
+  private removeTouchMoveListener(): void {
     if (this.touchMoveHandler) {
       document.removeEventListener('touchmove', this.touchMoveHandler);
       this.touchMoveHandler = null;
@@ -945,6 +950,9 @@ export class NoteCardComponent implements AfterViewInit, OnDestroy {
       y: event.touches[0].clientY,
     };
     this.touchIsDragging = false;
+    this.removeTouchMoveListener();
+    this.touchMoveHandler = (e: TouchEvent) => this.onDocumentTouchMove(e);
+    document.addEventListener('touchmove', this.touchMoveHandler, { passive: false });
   }
 
   onResizeTouchStart(event: TouchEvent): void {
@@ -979,6 +987,7 @@ export class NoteCardComponent implements AfterViewInit, OnDestroy {
 
   @HostListener('document:touchend')
   onDocumentTouchEnd(): void {
+    this.removeTouchMoveListener();
     if (this.touchStartPos) {
       if (!this.touchIsDragging) {
         // Fue un tap sin arrastre → editar la nota

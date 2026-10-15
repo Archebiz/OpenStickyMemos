@@ -33,6 +33,7 @@ public partial class StickyBoardView : UserControl
         _vm.BoardCleared += ClearNotesCanvas;
         _vm.ActionRequestsChanged += UpdateApprovalsBadge;
         _vm.ReminderDue += ShowReminderToast;
+        _vm.FilterChanged += ApplyTagFilter;
         _ = LoadBoardAndRefreshAsync();
     }
 
@@ -69,8 +70,21 @@ public partial class StickyBoardView : UserControl
         });
     }
 
+    private void UnsubscribeVmEvents()
+    {
+        if (_vm is null) return;
+        _vm.NoteAdded -= AddNoteToCanvas;
+        _vm.NoteUpdated -= UpdateNoteOnCanvas;
+        _vm.NoteRemoved -= RemoveNoteFromCanvas;
+        _vm.BoardCleared -= ClearNotesCanvas;
+        _vm.ActionRequestsChanged -= UpdateApprovalsBadge;
+        _vm.ReminderDue -= ShowReminderToast;
+        _vm.FilterChanged -= ApplyTagFilter;
+    }
+
     private void BackButton_Click(object sender, RoutedEventArgs e)
     {
+        UnsubscribeVmEvents();
         _vm.GoBack();
     }
 
@@ -102,6 +116,7 @@ public partial class StickyBoardView : UserControl
             Canvas.SetTop(ctrl, note.PositionY);
             Panel.SetZIndex(ctrl, note.ZIndex);
             NotesCanvas.Children.Add(ctrl);
+            ApplyTagFilter();
         });
     }
 
@@ -212,10 +227,9 @@ public partial class StickyBoardView : UserControl
         // Mostrar sidebar para mover la nota a otro proyecto
         ShowMoveSidebar();
 
-        // Bring to front
+        // Bring to front visual
         _maxZIndex++;
         Panel.SetZIndex(note, _maxZIndex);
-        _vm.UpdateNoteZIndex(note.NoteId, _maxZIndex);
     }
 
     private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
@@ -262,13 +276,44 @@ public partial class StickyBoardView : UserControl
             }
             else
             {
-                // Notify VM of new position
+                // Notificar al VM la nueva posición y Z-index en un solo flujo
                 _vm.UpdateNotePosition(noteId, left, top);
+                _vm.UpdateNoteZIndex(noteId, _maxZIndex);
             }
 
             _localChanges.Remove(noteId);
             _dragNote = null;
         }
+    }
+
+    private void TagFilterTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_vm is not null)
+        {
+            _vm.TagFilter = TagFilterTextBox.Text;
+        }
+    }
+
+    private void ApplyTagFilter()
+    {
+        var filter = _vm?.TagFilter?.Trim().ToLowerInvariant() ?? string.Empty;
+        Dispatcher.Invoke(() =>
+        {
+            foreach (var child in NotesCanvas.Children.OfType<NoteControl>())
+            {
+                if (string.IsNullOrEmpty(filter))
+                {
+                    child.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    var noteTags = child.Tags?.ToLowerInvariant() ?? string.Empty;
+                    var title = child.Title?.ToLowerInvariant() ?? string.Empty;
+                    var matches = noteTags.Contains(filter) || title.Contains(filter);
+                    child.Visibility = matches ? Visibility.Visible : Visibility.Collapsed;
+                }
+            }
+        });
     }
 
     private void OnNoteContentChanged(string noteId, string title, string content)
