@@ -29,12 +29,14 @@ public class NoteService : INoteService
     private readonly AppDbContext _db;
     private readonly IProjectService _projectService;
     private readonly IHubContext<NotesHub> _hubContext;
+    private readonly INotificationService _notificationService;
 
-    public NoteService(AppDbContext db, IProjectService projectService, IHubContext<NotesHub> hubContext)
+    public NoteService(AppDbContext db, IProjectService projectService, IHubContext<NotesHub> hubContext, INotificationService notificationService)
     {
         _db = db;
         _projectService = projectService;
         _hubContext = hubContext;
+        _notificationService = notificationService;
     }
 
     public async Task<List<NoteResponse>> GetProjectNotesAsync(Guid projectId, Guid userId, bool includeArchived = false)
@@ -129,6 +131,9 @@ public class NoteService : INoteService
         await _hubContext.Clients.Group(projectId.ToString())
             .SendAsync("NoteCreated", response);
 
+        // Procesar menciones @usuario
+        _ = _notificationService.ProcessMentionsAsync(note, null, authorId);
+
         return response;
     }
 
@@ -143,6 +148,8 @@ public class NoteService : INoteService
 
         if (!await _projectService.IsMemberAsync(note.ProjectId, userId))
             return null;
+
+        var previousContent = $"{note.Title ?? ""} {note.Content ?? ""}";
 
         if (request.Title is not null) note.Title = request.Title;
         if (request.Content is not null) note.Content = request.Content;
@@ -169,6 +176,9 @@ public class NoteService : INoteService
         // SignalR: notificar actualización a todos los miembros del proyecto
         await _hubContext.Clients.Group(note.ProjectId.ToString())
             .SendAsync("NoteUpdated", response);
+
+        // Procesar menciones @usuario
+        _ = _notificationService.ProcessMentionsAsync(note, previousContent, userId);
 
         return response;
     }

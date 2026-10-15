@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
     public DbSet<Note> Notes => Set<Note>();
     public DbSet<NoteActionRequest> NoteActionRequests => Set<NoteActionRequest>();
+    public DbSet<UserNotification> Notifications => Set<UserNotification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -124,6 +125,32 @@ public class AppDbContext : DbContext
             entity.HasOne(r => r.DecidedBy)
                   .WithMany()
                   .HasForeignKey(r => r.DecidedById)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ── UserNotification ──
+        modelBuilder.Entity<UserNotification>(entity =>
+        {
+            entity.HasIndex(n => new { n.UserId, n.IsRead, n.CreatedAt });
+
+            entity.HasOne(n => n.User)
+                  .WithMany()
+                  .HasForeignKey(n => n.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(n => n.Author)
+                  .WithMany()
+                  .HasForeignKey(n => n.AuthorId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(n => n.Project)
+                  .WithMany()
+                  .HasForeignKey(n => n.ProjectId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(n => n.Note)
+                  .WithMany()
+                  .HasForeignKey(n => n.NoteId)
                   .OnDelete(DeleteBehavior.SetNull);
         });
     }

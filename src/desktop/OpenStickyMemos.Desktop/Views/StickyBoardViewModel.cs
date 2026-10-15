@@ -52,6 +52,9 @@ public class StickyBoardViewModel : BaseViewModel
     public string ProjectName => _projectName;
     public string ProjectId => _projectId;
     public bool IsOwner => _isOwner;
+    public IApiService Api => _api;
+    public ISignalRService SignalR => _signalR;
+    public string? TargetNoteId { get; set; }
     public bool ShowArchived
     {
         get => _showArchived;
@@ -145,8 +148,12 @@ public class StickyBoardViewModel : BaseViewModel
         try
         {
             // Obtener projectId del parámetro de navegación
-            var projectIdParam = _navigation.NavigationParameter as string;
-            if (!string.IsNullOrEmpty(projectIdParam))
+            if (_navigation.NavigationParameter is (string projId, string targetNote))
+            {
+                _projectId = projId;
+                TargetNoteId = targetNote;
+            }
+            else if (_navigation.NavigationParameter is string projectIdParam && !string.IsNullOrEmpty(projectIdParam))
             {
                 _projectId = projectIdParam;
             }

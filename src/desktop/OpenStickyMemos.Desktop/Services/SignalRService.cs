@@ -20,6 +20,7 @@ public interface ISignalRService
     event Action<string, string>? NoteDeleted; // noteId, projectId
     event Action<NoteActionRequestResponse>? ActionRequestCreated;
     event Action<NoteActionRequestResponse>? ActionRequestResolved;
+    event Action<NotificationResponse>? NotificationReceived;
     event Action<bool>? ConnectionStateChanged;
     Task StartAsync();
     Task JoinProjectAsync(string projectId);
@@ -39,6 +40,7 @@ public class SignalRService : ISignalRService
     public event Action<string, string>? NoteDeleted;
     public event Action<NoteActionRequestResponse>? ActionRequestCreated;
     public event Action<NoteActionRequestResponse>? ActionRequestResolved;
+    public event Action<NotificationResponse>? NotificationReceived;
     public event Action<bool>? ConnectionStateChanged;
 
     private static readonly string LogPath = Desktop.App.LogPath;
@@ -117,6 +119,12 @@ public class SignalRService : ISignalRService
         {
             Log($"Evento recibido: ActionRequestResolved (id={request.Id}, status={request.Status})");
             ActionRequestResolved?.Invoke(request);
+        });
+
+        _connection.On<NotificationResponse>("NotificationReceived", notif =>
+        {
+            Log($"Evento recibido: NotificationReceived (id={notif.Id}, msg={notif.Message})");
+            NotificationReceived?.Invoke(notif);
         });
 
         _connection.Reconnecting += _ =>

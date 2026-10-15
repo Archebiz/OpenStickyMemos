@@ -15,12 +15,13 @@ import { ApiService } from '../../core/api.service';
 import { SignalRService } from '../../core/signalr.service';
 import { NoteCardComponent, NoteCardData } from './note-card.component';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog.component';
+import { NotificationBellComponent } from '../../shared/notification-bell.component';
 import { NoteResponse, ProjectResponse, InvitationResponse, NoteActionRequestResponse } from '../../models';
 
 @Component({
   selector: 'app-sticky-board',
   standalone: true,
-  imports: [CommonModule, FormsModule, NoteCardComponent, ConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, NoteCardComponent, ConfirmDialogComponent, NotificationBellComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="board-container">
@@ -82,6 +83,8 @@ import { NoteResponse, ProjectResponse, InvitationResponse, NoteActionRequestRes
             {{ addingNote ? '...' : '+ Nota' }}
             <kbd class="kbd-hint">N</kbd>
           </button>
+
+          <app-notification-bell></app-notification-bell>
         </div>
       </div>
 
@@ -227,6 +230,8 @@ import { NoteResponse, ProjectResponse, InvitationResponse, NoteActionRequestRes
         @for (note of visibleNotes; track note.id) {
           <app-note-card
             [note]="note"
+            [isHighlighted]="note.id === highlightedNoteId"
+            [projectMembers]="projectMembersList"
             (noteChange)="onNoteChange($event)"
             (deleteNote)="onDeleteNote($event)"
             (archiveNote)="onArchiveNote($event)"
@@ -828,8 +833,31 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
   tagFilter = '';
   toastMessage = '';
   signalRConnected = false;
+  highlightedNoteId: string | null = null;
   private scheduledReminders = new Set<string>();
   private notifiedReminders = new Set<string>();
+
+  get projectMembersList(): { userId: string; displayName: string; email: string }[] {
+    if (!this.project) return [];
+    const list: { userId: string; displayName: string; email: string }[] = [];
+    if (this.project.ownerId && this.project.ownerName) {
+      list.push({
+        userId: this.project.ownerId,
+        displayName: this.project.ownerName,
+        email: '',
+      });
+    }
+    for (const m of this.project.members ?? []) {
+      if (!list.some((x) => x.userId === m.userId)) {
+        list.push({
+          userId: m.userId,
+          displayName: m.displayName,
+          email: m.email,
+        });
+      }
+    }
+    return list;
+  }
 
   get visibleNotes(): NoteCardData[] {
     const q = this.tagFilter.trim().toLowerCase();
@@ -888,6 +916,15 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
     this.loadNotes();
     this.loadActionRequests();
     this.joinSignalR();
+
+    // Resaltar nota si viene en queryParams
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((params) => {
+        if (params['noteId']) {
+          this.highlightNote(params['noteId']);
+        }
+      });
 
     // Estado de conexión SignalR para feedback visual
     this.signalR.connectionState$
@@ -984,9 +1021,24 @@ export class StickyBoardComponent implements OnInit, OnDestroy {
         next: (data) => {
           this.notes = data.map((n) => this.toCardData(n));
           this.scheduleReminders();
+          const targetNoteId = this.route.snapshot.queryParams['noteId'];
+          if (targetNoteId) {
+            this.highlightNote(targetNoteId);
+          }
           this.cdr.markForCheck();
         },
       });
+  }
+
+  highlightNote(noteId: string): void {
+    this.highlightedNoteId = noteId;
+    this.cdr.markForCheck();
+    setTimeout(() => {
+      if (this.highlightedNoteId === noteId) {
+        this.highlightedNoteId = null;
+        this.cdr.markForCheck();
+      }
+    }, 5000);
   }
 
   private loadActionRequests(): void {

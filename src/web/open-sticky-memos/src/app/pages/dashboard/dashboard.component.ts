@@ -4,11 +4,12 @@ import { Router } from '@angular/router';
 import { AuthService, UserInfo } from '../../core/auth.service';
 import { SignalRService } from '../../core/signalr.service';
 import { ProjectListComponent } from '../projects/project-list.component';
+import { NotificationBellComponent } from '../../shared/notification-bell.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ProjectListComponent],
+  imports: [CommonModule, ProjectListComponent, NotificationBellComponent],
   template: `
     <div class="dashboard">
       <header class="header">
@@ -17,6 +18,7 @@ import { ProjectListComponent } from '../projects/project-list.component';
           <h2>OpenStickyMemos</h2>
         </div>
         <div class="header-right">
+          <app-notification-bell></app-notification-bell>
           <div class="user-info" *ngIf="user">
             <img
               *ngIf="user.avatarUrl"

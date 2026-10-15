@@ -17,6 +17,7 @@ import {
   CreateInvitationRequest,
   InvitationResponse,
   InvitationPublicResponse,
+  NotificationResponse,
 } from '../models';
 
 @Injectable()
@@ -163,5 +164,23 @@ export class ApiService {
   /** Acepta una invitación (requiere auth) */
   acceptInvitation(token: string): Observable<InvitationResponse> {
     return this.http.post<InvitationResponse>(`${this.apiUrl}/invitations/${token}/accept`, {});
+  }
+
+  // ── Notificaciones ──
+
+  getNotifications(limit = 30): Observable<NotificationResponse[]> {
+    return this.http.get<NotificationResponse[]>(`${this.apiUrl}/notifications?limit=${limit}`);
+  }
+
+  getUnreadNotificationCount(): Observable<{ count: number }> {
+    return this.http.get<{ count: number }>(`${this.apiUrl}/notifications/unread-count`);
+  }
+
+  markNotificationAsRead(id: string): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/notifications/${id}/read`, {});
+  }
+
+  markAllNotificationsAsRead(): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/notifications/read-all`, {});
   }
 }

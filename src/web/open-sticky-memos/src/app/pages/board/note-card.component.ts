@@ -11,6 +11,7 @@ import {
   ChangeDetectionStrategy,
   OnChanges,
   SimpleChanges,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -52,6 +53,7 @@ export interface NoteCardData {
       [style.z-index]="note.zIndex"
       [class.editing]="isEditing"
       [class.pinned]="note.isPinned"
+      [class.highlighted]="isHighlighted"
       [class.pending]="note.pendingDelete || note.pendingArchive"
       [class.archived]="note.isArchived"
       (mousedown)="onMouseDown($event)"
@@ -102,13 +104,14 @@ export interface NoteCardData {
             #titleInput
             class="edit-title"
             [value]="editTitle"
-            (input)="editTitle = $any($event.target).value"
+            (input)="onTitleInput($any($event.target).value)"
             placeholder="Título (opcional)"
             (keydown.escape)="cancelEdit()"
             (keydown.control.enter)="saveEdit()"
             (keydown.meta.enter)="saveEdit()"
           />
           <div class="format-toolbar">
+            <button type="button" (mousedown)="$event.preventDefault()" (click)="triggerMention()" title="Mencionar miembro (@)"><b>&#64;</b></button>
             <button type="button" (mousedown)="$event.preventDefault()" (click)="execCmd('bold')" title="Negrita (Ctrl+B)"><b>B</b></button>
             <button type="button" (mousedown)="$event.preventDefault()" (click)="execCmd('italic')" title="Cursiva (Ctrl+I)"><i>I</i></button>
             <button type="button" (mousedown)="$event.preventDefault()" (click)="execCmd('underline')" title="Subrayado (Ctrl+U)"><u>U</u></button>
@@ -144,10 +147,32 @@ export interface NoteCardData {
               class="edit-content"
               contenteditable="true"
               [innerHTML]="editContent"
+              (input)="onEditorInput($event)"
+              (keyup)="onEditorInput($event)"
               (keydown.escape)="cancelEdit()"
               (keydown.control.enter)="saveEdit()"
               (keydown.meta.enter)="saveEdit()"
             ></div>
+          }
+
+          @if (showMentionDropdown && filteredMembers.length > 0) {
+            <div class="mention-dropdown" (click)="$event.stopPropagation()">
+              <div class="mention-header">Mencionar a:</div>
+              @for (m of filteredMembers; track m.userId) {
+                <button
+                  type="button"
+                  class="mention-item"
+                  (mousedown)="$event.preventDefault()"
+                  (click)="insertMention(m)"
+                >
+                  <div class="mention-avatar">{{ (m.displayName || 'U').charAt(0).toUpperCase() }}</div>
+                  <div class="mention-info">
+                    <span class="mention-name">{{ m.displayName }}</span>
+                    <span class="mention-email">{{ m.email }}</span>
+                  </div>
+                </button>
+              }
+            </div>
           }
 
           @if (showTagsEditor) {
@@ -251,6 +276,16 @@ export interface NoteCardData {
         cursor: default;
         box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
         z-index: 10;
+      }
+      .note-card.highlighted {
+        outline: 3px solid #6366f1;
+        box-shadow: 0 0 25px rgba(99, 102, 241, 0.7), 0 8px 30px rgba(0, 0, 0, 0.25);
+        animation: cardGlowPulse 1.2s infinite ease-in-out;
+        z-index: 99 !important;
+      }
+      @keyframes cardGlowPulse {
+        0%, 100% { outline-color: #6366f1; }
+        50% { outline-color: #f59e0b; box-shadow: 0 0 35px rgba(245, 158, 11, 0.8), 0 10px 30px rgba(0, 0, 0, 0.3); }
       }
       .resize-handle {
         position: absolute;
@@ -675,12 +710,82 @@ export interface NoteCardData {
         padding: 2px 8px;
         border-radius: 10px;
       }
+      .mention-dropdown {
+        position: absolute;
+        bottom: 50px;
+        left: 8px;
+        right: 8px;
+        max-height: 140px;
+        overflow-y: auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        border: 1px solid #e2e8f0;
+        z-index: 100;
+        padding: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .mention-header {
+        font-size: 10px;
+        font-weight: 700;
+        color: #64748b;
+        padding: 3px 6px;
+        text-transform: uppercase;
+      }
+      .mention-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 8px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        text-align: left;
+        width: 100%;
+        transition: background 0.1s;
+      }
+      .mention-item:hover {
+        background: #eef2ff;
+      }
+      .mention-avatar {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #6366f1;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: bold;
+        flex-shrink: 0;
+      }
+      .mention-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .mention-name {
+        font-size: 12px;
+        font-weight: 600;
+        color: #1e293b;
+      }
+      .mention-email {
+        font-size: 10px;
+        color: #64748b;
+      }
     `,
   ],
 })
 export class NoteCardComponent implements AfterViewInit, OnDestroy, OnChanges {
   @Input() note!: NoteCardData;
+  @Input() isHighlighted = false;
+  @Input() projectMembers: { userId: string; displayName: string; email: string }[] = [];
   @Output() noteChange = new EventEmitter<NoteCardData>();
+  private hostElement = inject(ElementRef);
   private touchMoveHandler: ((e: TouchEvent) => void) | null = null;
   @Output() deleteNote = new EventEmitter<string>();
   @Output() archiveNote = new EventEmitter<string>();
@@ -728,12 +833,31 @@ export class NoteCardComponent implements AfterViewInit, OnDestroy, OnChanges {
   /** Etiquetas cacheadas como lista (para los chips). */
   tagList: string[] = [];
 
+  showMentionDropdown = false;
+  mentionQuery = '';
+
+  get filteredMembers() {
+    if (!this.projectMembers) return [];
+    const q = this.mentionQuery.trim().toLowerCase();
+    if (!q) return this.projectMembers;
+    return this.projectMembers.filter(
+      (m) =>
+        (m.displayName || '').toLowerCase().includes(q) ||
+        (m.email || '').toLowerCase().includes(q)
+    );
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['note']) {
       this.tasks = this.parseTasks(this.note?.content);
       this.tagList = this.note?.tags
         ? this.note.tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
         : [];
+    }
+    if (changes['isHighlighted'] && this.isHighlighted) {
+      setTimeout(() => {
+        this.hostElement.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      }, 100);
     }
   }
 
@@ -772,6 +896,49 @@ export class NoteCardComponent implements AfterViewInit, OnDestroy, OnChanges {
     this.showEmoji = false;
     this.showTagsEditor = false;
     this.showReminderEditor = false;
+    this.showMentionDropdown = false;
+  }
+
+  triggerMention(): void {
+    this.showMentionDropdown = !this.showMentionDropdown;
+    this.mentionQuery = '';
+  }
+
+  onEditorInput(e: Event): void {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const text = selection.anchorNode?.textContent ?? '';
+    const offset = selection.anchorOffset;
+    const beforeCursor = text.slice(0, offset);
+    const match = beforeCursor.match(/@([a-zA-Z0-9_\.\s]{0,20})$/);
+    if (match) {
+      this.showMentionDropdown = true;
+      this.mentionQuery = match[1];
+    } else {
+      this.showMentionDropdown = false;
+    }
+  }
+
+  onTitleInput(value: string): void {
+    this.editTitle = value;
+    const match = value.match(/@([a-zA-Z0-9_\.\s]{0,20})$/);
+    if (match) {
+      this.showMentionDropdown = true;
+      this.mentionQuery = match[1];
+    } else {
+      this.showMentionDropdown = false;
+    }
+  }
+
+  insertMention(member: { displayName: string }): void {
+    const nameToInsert = `@${member.displayName} `;
+    if (this.editorEl) {
+      this.editorEl.nativeElement.focus();
+      document.execCommand('insertText', false, nameToInsert);
+    } else {
+      this.editTitle += nameToInsert;
+    }
+    this.showMentionDropdown = false;
   }
 
   saveEdit(): void {
@@ -785,6 +952,7 @@ export class NoteCardComponent implements AfterViewInit, OnDestroy, OnChanges {
     this.showEmoji = false;
     this.showTagsEditor = false;
     this.showReminderEditor = false;
+    this.showMentionDropdown = false;
     this.noteChange.emit({
       ...this.note,
       title: this.editTitle || null,

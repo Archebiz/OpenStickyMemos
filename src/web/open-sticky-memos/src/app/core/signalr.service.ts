@@ -4,6 +4,7 @@ import * as signalR from '@microsoft/signalr';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { AuthService } from './auth.service';
 import { AppConfigService } from './app-config.service';
+import { NotificationResponse } from '../models';
 
 export interface NoteEvent {
   id: string;
@@ -73,6 +74,7 @@ export class SignalRService implements OnDestroy {
   private memberAddedSubject = new Subject<MemberEvent>();
   private actionRequestCreatedSubject = new Subject<NoteActionRequestEvent>();
   private actionRequestResolvedSubject = new Subject<NoteActionRequestEvent>();
+  private notificationReceivedSubject = new Subject<NotificationResponse>();
   private connectionStateSubject = new BehaviorSubject<boolean>(false);
 
   noteCreated$: Observable<NoteEvent> = this.noteCreatedSubject.asObservable();
@@ -81,6 +83,7 @@ export class SignalRService implements OnDestroy {
   memberAdded$: Observable<MemberEvent> = this.memberAddedSubject.asObservable();
   actionRequestCreated$: Observable<NoteActionRequestEvent> = this.actionRequestCreatedSubject.asObservable();
   actionRequestResolved$: Observable<NoteActionRequestEvent> = this.actionRequestResolvedSubject.asObservable();
+  notificationReceived$: Observable<NotificationResponse> = this.notificationReceivedSubject.asObservable();
   connectionState$: Observable<boolean> = this.connectionStateSubject.asObservable();
 
   constructor(
@@ -163,6 +166,7 @@ export class SignalRService implements OnDestroy {
     this.memberAddedSubject.complete();
     this.actionRequestCreatedSubject.complete();
     this.actionRequestResolvedSubject.complete();
+    this.notificationReceivedSubject.complete();
     this.connectionStateSubject.complete();
   }
 
@@ -191,6 +195,10 @@ export class SignalRService implements OnDestroy {
 
     this.hubConnection?.on('MemberAdded', (member: MemberEvent) => {
       this.ngZone.run(() => this.memberAddedSubject.next(member));
+    });
+
+    this.hubConnection?.on('NotificationReceived', (notification: NotificationResponse) => {
+      this.ngZone.run(() => this.notificationReceivedSubject.next(notification));
     });
   }
 }

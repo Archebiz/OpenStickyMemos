@@ -34,6 +34,8 @@ public partial class StickyBoardView : UserControl
         _vm.ActionRequestsChanged += UpdateApprovalsBadge;
         _vm.ReminderDue += ShowReminderToast;
         _vm.FilterChanged += ApplyTagFilter;
+        _vm.SignalR.NotificationReceived += OnNotificationReceived;
+        _ = UpdateNotificationsBadgeAsync();
         _ = LoadBoardAndRefreshAsync();
     }
 
@@ -41,6 +43,11 @@ public partial class StickyBoardView : UserControl
     {
         await _vm.LoadBoardAsync();
         RefreshHeaderButtons();
+        if (!string.IsNullOrEmpty(_vm.TargetNoteId))
+        {
+            HighlightNote(_vm.TargetNoteId);
+            _vm.TargetNoteId = null;
+        }
     }
 
     private void RefreshHeaderButtons()
@@ -86,6 +93,7 @@ public partial class StickyBoardView : UserControl
         _vm.ActionRequestsChanged -= UpdateApprovalsBadge;
         _vm.ReminderDue -= ShowReminderToast;
         _vm.FilterChanged -= ApplyTagFilter;
+        _vm.SignalR.NotificationReceived -= OnNotificationReceived;
     }
 
     private void BackButton_Click(object sender, RoutedEventArgs e)
@@ -964,5 +972,97 @@ public partial class StickyBoardView : UserControl
     {
         var decoded = System.Net.WebUtility.HtmlDecode(html);
         return System.Text.RegularExpressions.Regex.Replace(decoded, "<[^>]+>", string.Empty);
+    }
+
+    private void OnNotificationReceived(NotificationResponse notif)
+    {
+        Dispatcher.Invoke(async () =>
+        {
+            await UpdateNotificationsBadgeAsync();
+        });
+    }
+
+    private async Task UpdateNotificationsBadgeAsync()
+    {
+        if (_vm?.Api is null || NotificationBellButton is null) return;
+        try
+        {
+            var count = await _vm.Api.GetUnreadNotificationCountAsync();
+            Dispatcher.Invoke(() =>
+            {
+                NotificationBellButton.Content = count > 0 ? $"🔔 ({count})" : "🔔";
+            });
+        }
+        catch { }
+    }
+
+    private async void NotificationBellButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm?.Api is null) return;
+        NotificationsOverlay.Visibility = Visibility.Visible;
+        try
+        {
+            var items = await _vm.Api.GetNotificationsAsync(30);
+            NotificationsList.ItemsSource = items;
+            NotificationsEmptyText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+        catch { }
+    }
+
+    private void CloseNotifications_Click(object sender, RoutedEventArgs e)
+    {
+        NotificationsOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private async void MarkAllNotificationsRead_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm?.Api is null) return;
+        await _vm.Api.MarkAllNotificationsAsReadAsync();
+        var items = await _vm.Api.GetNotificationsAsync(30);
+        NotificationsList.ItemsSource = items;
+        await UpdateNotificationsBadgeAsync();
+    }
+
+    private async void NotificationItem_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement el && el.Tag is NotificationResponse notif)
+        {
+            if (!notif.IsRead)
+            {
+                _ = _vm.Api.MarkNotificationAsReadAsync(notif.Id);
+                notif.IsRead = true;
+                _ = UpdateNotificationsBadgeAsync();
+            }
+            NotificationsOverlay.Visibility = Visibility.Collapsed;
+
+            if (!string.IsNullOrEmpty(notif.NoteId))
+            {
+                if (notif.ProjectId == _vm.ProjectId)
+                {
+                    HighlightNote(notif.NoteId);
+                }
+                else
+                {
+                    App.Services.GetService(typeof(NavigationService));
+                    _vm.TargetNoteId = notif.NoteId;
+                    _ = LoadBoardAndRefreshAsync();
+                }
+            }
+        }
+    }
+
+    public void HighlightNote(string noteId)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            foreach (UIElement child in NotesCanvas.Children)
+            {
+                if (child is NoteControl nc && nc.NoteId == noteId)
+                {
+                    nc.Highlight();
+                    break;
+                }
+            }
+        });
     }
 }

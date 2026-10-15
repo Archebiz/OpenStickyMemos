@@ -166,3 +166,22 @@ export interface InvitationPublicResponse {
   isExpired: boolean;
   isAccepted: boolean;
 }
+
+// ── Notificaciones ──
+
+export interface NotificationResponse {
+  id: string;
+  userId: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string | null;
+  projectId: string;
+  projectName: string;
+  noteId?: string | null;
+  noteTitle?: string | null;
+  type: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
+

@@ -110,6 +110,28 @@ public class InvitationResponse
     public DateTime? AcceptedAt { get; set; }
 }
 
+public class NotificationResponse
+{
+    public string Id { get; set; } = string.Empty;
+    public string UserId { get; set; } = string.Empty;
+    public string AuthorId { get; set; } = string.Empty;
+    public string AuthorName { get; set; } = string.Empty;
+    public string? AuthorAvatar { get; set; }
+    public string ProjectId { get; set; } = string.Empty;
+    public string ProjectName { get; set; } = string.Empty;
+    public string? NoteId { get; set; }
+    public string? NoteTitle { get; set; }
+    public string Type { get; set; } = "Mention";
+    public string Message { get; set; } = string.Empty;
+    public bool IsRead { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class UnreadNotificationsCountResponse
+{
+    public int Count { get; set; }
+}
+
 public class InvitationPublicResponse
 {
     public string ProjectId { get; set; } = string.Empty;
@@ -149,6 +171,12 @@ public interface IApiService
     Task<List<InvitationResponse>> GetProjectInvitationsAsync(string projectId);
     Task<bool> RevokeInvitationAsync(string projectId, string invitationId);
     Task<InvitationPublicResponse?> GetInvitationPublicInfoAsync(string token);
+
+    // ── Notificaciones ──
+    Task<List<NotificationResponse>> GetNotificationsAsync(int limit = 30);
+    Task<int> GetUnreadNotificationCountAsync();
+    Task<bool> MarkNotificationAsReadAsync(string id);
+    Task<bool> MarkAllNotificationsAsReadAsync();
 }
 
 public class ApiService : IApiService
@@ -543,5 +571,49 @@ public class ApiService : IApiService
     public async Task<InvitationPublicResponse?> GetInvitationPublicInfoAsync(string token)
     {
         return await GetAsync<InvitationPublicResponse>($"/api/Invitations/{token}");
+    }
+
+    // ── Notificaciones ──
+
+    public async Task<List<NotificationResponse>> GetNotificationsAsync(int limit = 30)
+    {
+        return await GetAsync<List<NotificationResponse>>($"/api/Notifications?limit={limit}")
+               ?? new List<NotificationResponse>();
+    }
+
+    public async Task<int> GetUnreadNotificationCountAsync()
+    {
+        var res = await GetAsync<UnreadNotificationsCountResponse>("/api/Notifications/unread-count");
+        return res?.Count ?? 0;
+    }
+
+    public async Task<bool> MarkNotificationAsReadAsync(string id)
+    {
+        var url = $"/api/Notifications/{id}/read";
+        try
+        {
+            var res = await _http.PatchAsync(url, null);
+            return res.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            LogError($"PATCH {url}", ex);
+            return false;
+        }
+    }
+
+    public async Task<bool> MarkAllNotificationsAsReadAsync()
+    {
+        var url = "/api/Notifications/read-all";
+        try
+        {
+            var res = await _http.PostAsync(url, null);
+            return res.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            LogError($"POST {url}", ex);
+            return false;
+        }
     }
 }

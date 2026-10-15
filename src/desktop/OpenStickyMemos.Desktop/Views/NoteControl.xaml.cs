@@ -234,6 +234,29 @@ public partial class NoteControl : UserControl
         }
     }
 
+    public void Highlight()
+    {
+        var originalBrush = NoteBorder.BorderBrush;
+        var originalThickness = NoteBorder.BorderThickness;
+
+        NoteBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(99, 102, 241));
+        NoteBorder.BorderThickness = new Thickness(3);
+
+        var timer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(4)
+        };
+        timer.Tick += (s, e) =>
+        {
+            timer.Stop();
+            NoteBorder.BorderBrush = originalBrush;
+            NoteBorder.BorderThickness = originalThickness;
+        };
+        timer.Start();
+
+        BringIntoView();
+    }
+
     // ── Property changed callbacks ──
 
     private static void OnTitleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
